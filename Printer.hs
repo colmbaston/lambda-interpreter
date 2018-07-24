@@ -17,15 +17,12 @@ import Lambda
 
 {-------------------------------------------------------------------------------
 
-Printing function for lambda-terms. Prints terms with their standard inline
-syntax. Uses difference lists with ShowS to avoid large left-associations of
-(++). Decides whether to surround subterms with parentheses by passing booleans
-to showParen.
+Standard (non-pretty) printing function for lambda-terms.
 
 -}
 
 instance Show Term where
-    showsPrec _ (Var x) = showString x
+    showsPrec _ (Var x)   = showString x
     showsPrec p (Abs x y) = showParen (p > 4) $ showString ('λ' : x) . showChar '.' . showsPrec 4 y
     showsPrec p (App x y) = showParen (p > 5) $ showsPrec 5 x . showChar ' ' . showsPrec 6 y
 

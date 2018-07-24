@@ -158,11 +158,6 @@ freeVars (Var v)   = S.singleton v
 freeVars (Abs v t) = S.delete v (freeVars t)
 freeVars (App x y) = freeVars x `S.union` freeVars y
 
-boundVars :: Term -> Set Name
-boundVars (Var _)   = S.empty
-boundVars (Abs v t) = S.insert v (boundVars t)
-boundVars (App x y) = boundVars x `S.union` boundVars y
-
 allVars :: Term -> Set Name
 allVars (Var v)   = S.singleton v
 allVars (Abs v t) = S.insert v (allVars t)

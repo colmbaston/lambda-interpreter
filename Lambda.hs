@@ -68,10 +68,10 @@ descend _ (Var x)   = Var x
 descend f (Abs x y) = Abs x (f y)
 descend f (App x y) = App (f x) (f y)
 
-descendA :: Applicative f => (Term -> m Term) -> Term -> f Term
+descendA :: Applicative f => (Term -> f Term) -> Term -> f Term
 descendA _ (Var x)   = pure (Var x)
-descendA f (Abs x y) = Abs x <$> descendA f y
-descendA f (App x y) = App   <$> descendA f x <*> descendA f y
+descendA f (Abs x y) = Abs x <$> f y
+descendA f (App x y) = App <$> f x <*> f y
 
 {-
     Functions for performing substitution and dealing with name capture.

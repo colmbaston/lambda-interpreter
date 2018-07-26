@@ -111,7 +111,8 @@ settings = Settings (completeWord Nothing " " completions) (Just ".history") Fal
 
 interruptible :: MonadException m => InputT m a -> InputT m ()
 interruptible x = handle (\Interrupt -> do ansiColour red
-                                           outputStrLn "interrupted") (withInterrupt (void x))
+                                           outputStrLn "interrupted"
+                                           ansiColour reset) (withInterrupt (void x))
 
 {-
     The entry-point to the program. Set IO buffering mode, print a welcome message and run

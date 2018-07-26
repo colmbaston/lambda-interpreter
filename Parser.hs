@@ -65,7 +65,7 @@ parens p = do char '('
               pure x
 
 insensitive :: String -> Parser String
-insensitive = try . mapM (\c -> char (toUpper c) <|> char (toLower c) >> return c)
+insensitive = try . mapM (\c -> char (toUpper c) <|> char (toLower c) >> pure c)
 
 {-
     The parser for λ-terms, loosely based on the following context-free grammar:
@@ -150,7 +150,7 @@ dereference :: Map String Term -> Term -> Maybe Term
 dereference e (Var x) | all isLower x = pure (Var x)
                       | all isDigit x = pure (toNumeral (read x))
                       | otherwise     = M.lookup x e
-dereference e t       = descendM (dereference e) t
+dereference e t                       = descendA (dereference e) t
 
 toNumeral :: Int -> Term
 toNumeral n = Abs "f" (Abs "x" (go n))

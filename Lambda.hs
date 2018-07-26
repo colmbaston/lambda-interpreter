@@ -4,7 +4,7 @@ module Lambda
     Name,
     freeVars,
     descend,
-    descendM,
+    descendA,
     normOrder,
     applOrder,
     normalise,
@@ -68,10 +68,10 @@ descend _ (Var x)   = Var x
 descend f (Abs x y) = Abs x (f y)
 descend f (App x y) = App (f x) (f y)
 
-descendM :: Monad m => (Term -> m Term) -> Term -> m Term
-descendM _ (Var x)   = return $ Var x
-descendM f (Abs x y) = do { y' <- f y ; return $ Abs x y'}
-descendM f (App x y) = do { x' <- f x ; y' <- f y ; return $ App x' y' }
+descendA :: Applicative f => (Term -> m Term) -> Term -> f Term
+descendA _ (Var x)   = pure (Var x)
+descendA f (Abs x y) = Abs x <$> descendA f y
+descendA f (App x y) = App   <$> descendA f x <*> descendA f y
 
 {-
     Functions for performing substitution and dealing with name capture.

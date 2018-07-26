@@ -76,7 +76,7 @@ showPair = fmap (\(x,y) -> showChar '<'
                          . showChar '>') . toPair
 
 toList :: Term -> Maybe [Term]
-toList (Abs _ (Abs x (Abs y (Var z)))) | x == z && y /= z = return []
+toList (Abs _ (Abs x (Abs y (Var z)))) | x == z && y /= z = pure []
 toList t                                                  = do (x,y) <- toPair t
                                                                (x:) <$> toList y
 showList :: Term -> Maybe ShowS

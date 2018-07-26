@@ -257,7 +257,11 @@ runLine :: Int -> String -> Interpreter Bool
 runLine n l = do e <- env <$> lift get
                  case parseInput e l of
                    Nothing -> do ansiColour red
-                                 outputStrLn ("parse error on line " ++ show n ++ " - stopping")
+                                 outputStr"parse error on "
+                                 ansiColour cyan
+                                 outputStr ("line " ++ show n)
+                                 ansiColour red
+                                 outputStrLn " - stopping"
                                  pure False
                    Just  i -> do runInput i
                                  pure True

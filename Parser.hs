@@ -21,6 +21,7 @@ type Parser = Parsec Void String
 
 data Input = Term Term
            | Reds Term
+           | Time Term
            | Let String Term
            | Script FilePath
            | Eval EvalStrat
@@ -38,6 +39,7 @@ parseInput env str = case parseMaybe inputParser str of
                        Nothing        -> Nothing
                        Just (Term t)  -> Term  <$> dereference env t
                        Just (Reds t)  -> Reds  <$> dereference env t
+                       Just (Time t)  -> Time  <$> dereference env t
                        Just (Let n t) -> Let n <$> mfilter (null . freeVars) (dereference env t)
                        i              -> i
 
@@ -120,6 +122,7 @@ inputParser = trim (try (char '~' >> commandParser) <|> commentParser <|> Term <
 commandParser :: Parser Input
 commandParser =  Let                          <$> (insensitive "let"        >> space1 >> ident) <*> (space1 >> string ":=" >> termParser)
              <|> Reds                         <$> (insensitive "reductions" >> space1 >> termParser)
+             <|> Time                         <$> (insensitive "time"       >> space1 >> termParser)
              <|> Eval                         <$> (insensitive "eval"       >> space1 >> stratParser)
              <|> const PPrint                 <$>  insensitive "pprint"
              <|> Script                       <$> (insensitive "script"     >> space1 >> reverse . dropWhile isSpace . reverse <$> some anyChar)
@@ -147,10 +150,10 @@ stratParser =  const Norm <$> insensitive "norm"
 -}
 
 dereference :: Map String Term -> Term -> Maybe Term
-dereference e (Var x) | all isLower x = pure (Var x)
-                      | all isDigit x = pure (toNumeral (read x))
-                      | otherwise     = M.lookup x e
-dereference e t                       = descendA (dereference e) t
+dereference env (Var x) | all isLower x = pure (Var x)
+                        | all isDigit x = pure (toNumeral (read x))
+                        | otherwise     = M.lookup x env
+dereference env t                       = descendA (dereference env) t
 
 toNumeral :: Int -> Term
 toNumeral n = Abs "f" (Abs "x" (go n))

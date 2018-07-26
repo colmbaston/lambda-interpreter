@@ -6,6 +6,7 @@ import           Data.Char
 import           Data.List
 import qualified Data.Map as M
 import           Data.Map (Map)
+import           Data.Time.Clock
 
 import System.IO
 import System.Directory
@@ -170,6 +171,7 @@ runInput i = do s <- lift get
                 case i of
                   Term t   -> interruptible (runTerm t)
                   Reds t   -> interruptible (runReds t)
+                  Time t   -> interruptible (runTime t)
                   Let n t  -> lift (put s{ env = M.insert n t (env s) })
                   Script f -> runScript f
                   Eval e   -> lift (put s{ strat = e })
@@ -197,7 +199,7 @@ getPrint True  = pShow
 getPrint False = show
 
 runTerm :: Term -> Interpreter ()
-runTerm t = do (e,p) <- (getEval True . strat &&& (getPrint . pprint)) <$> lift get
+runTerm t = do (e,p) <- (getEval True . strat &&& getPrint . pprint) <$> lift get
                outputStrLn (p (e t))
 
 runReds :: Term -> Interpreter ()
@@ -208,6 +210,14 @@ runReds t = do (e,p) <- (getEval False . strat &&& getPrint . pprint) <$> lift g
                                      outputStrLn (p t))
                  ([0..] :: [Int])
                  (reductions e t)
+
+runTime :: Term -> Interpreter ()
+runTime t = do (e,p) <- (getEval True . strat &&& getPrint . pprint) <$> lift get
+               start <- liftIO getCurrentTime
+               outputStrLn (p (e t))
+               end   <- liftIO getCurrentTime
+               ansiColour green
+               outputStrLn ("normalised in " ++ show (diffUTCTime end start))
 
 {-
     When the ~script command is entered, first establish whether that file exists. If it does,

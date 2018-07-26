@@ -213,12 +213,21 @@ runReds t = do (e,p) <- (getEval False . strat &&& getPrint . pprint) <$> lift g
                  (reductions e t)
 
 runTime :: Term -> Interpreter ()
-runTime t = do (e,p) <- (getEval True . strat &&& getPrint . pprint) <$> lift get
+runTime t = do (s,p) <- (strat &&& getPrint . pprint) <$> lift get
                start <- liftIO getCurrentTime
-               outputStrLn (p (e t))
+               outputStrLn (p (getEval True s t))
                end   <- liftIO getCurrentTime
                ansiColour green
-               outputStrLn ("normalised in " ++ show (diffUTCTime end start))
+               outputStr ("normalised in ")
+               ansiColour cyan
+               outputStr (display (diffUTCTime end start) ++ " seconds")
+               ansiColour green
+               outputStr " with reduction strategy "
+               ansiColour cyan
+               outputStrLn (show s)
+  where
+    display :: NominalDiffTime -> String
+    display x = show (fromIntegral (round (x * 1000)) / 1000 :: Double)
 
 {-
     When the ~script command is entered, first establish whether that file exists. If it does,
@@ -266,7 +275,9 @@ runPPrint :: Interpreter ()
 runPPrint = do s <- lift get
                lift (put (s { pprint = not (pprint s) }))
                ansiColour green
-               outputStrLn ("pretty printing " ++ if pprint s then "off" else "on")
+               outputStr ("pretty printing ")
+               ansiColour cyan
+               outputStrLn (if pprint s then "off" else "on")
 
 runHelp :: Interpreter ()
 runHelp = do ansiColour green

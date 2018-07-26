@@ -34,6 +34,11 @@ data EvalStrat = Norm
                | Appl
                | Off
 
+instance Show EvalStrat where
+  show Norm = "norm"
+  show Appl = "appl"
+  show Off  = "off"
+
 parseInput :: Map String Term -> String -> Maybe Input
 parseInput env str = case parseMaybe inputParser str of
                        Nothing        -> Nothing

@@ -26,7 +26,7 @@ import Printer
 {-
     The main module for the program, dealing with all of the IO that needs to be done. Uses the
     Haskeline library's 'InputT' monad transformer to take input from stdin, while also
-    providing input history, word completion, and a line-editing interface. The interpreter
+    providing input history, tab-completion, and a line-editing interface. The interpreter
     also stores its own state: an environment of mappings from identifiers to terms, the
     current evaluation strategy, and the current printing strategy.
 -}
@@ -68,7 +68,7 @@ ansiScroll = liftIO (putStr "\ESC[1T")
 
 {-
     Configuration for the 'InputT' monad transformer which controls the
-    behaviour of reading lines from stdin, input history, and word completion.
+    behaviour of reading lines from stdin, input history, and tab-completion.
 -}
 
 getInput :: MonadException m => InputT m (Maybe String)
@@ -110,8 +110,7 @@ settings = Settings (completeWord Nothing " " completions) (Just ".history") Fal
     makeComp = map (\x -> Completion x ("\ESC[1;32m" ++ x ++ "\ESC[m") True)
 
 interruptible :: MonadException m => InputT m a -> InputT m ()
-interruptible x = handle (\Interrupt -> do ansiColour red
-                                           outputStrLn "interrupted"
+interruptible x = handle (\Interrupt -> do outputStrLn "\ESC[1;31minterrupted"
                                            ansiColour reset) (withInterrupt (void x))
 
 {-

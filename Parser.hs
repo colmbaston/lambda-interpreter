@@ -122,7 +122,7 @@ commandParser =  Let                          <$> (insensitive "let"        >> s
              <|> Reds                         <$> (insensitive "reductions" >> space1 >> termParser)
              <|> Eval                         <$> (insensitive "eval"       >> space1 >> stratParser)
              <|> const PPrint                 <$>  insensitive "pprint"
-             <|> Script                       <$> (insensitive "script"     >> space1 >> some anyChar)
+             <|> Script                       <$> (insensitive "script"     >> space1 >> reverse . dropWhile isSpace . reverse <$> some anyChar)
              <|> const (Script "lib/Prelude") <$>  insensitive "prelude"
              <|> const Help                   <$>  insensitive "help"
              <|> const Exit                   <$>  insensitive "exit"

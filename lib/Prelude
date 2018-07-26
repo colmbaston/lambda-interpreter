@@ -1,6 +1,6 @@
-~~ -----------------
-~~ Basic Combinators
-~~ -----------------
+~~ |-------------------|
+~~ | Basic Combinators |
+~~ |-------------------|
 
 ~let S := λx.λy.λz.x z (y z)
 ~let K := λx.λy.x
@@ -10,9 +10,9 @@
 ~let W := λx.λy.x y y
 ~let X := λx.x S K
 
-~~ --------
-~~ Booleans
-~~ --------
+~~ |----------|
+~~ | Booleans |
+~~ |----------|
 
 ~let True  := λt.λf.t
 ~let False := λt.λf.f
@@ -25,9 +25,9 @@
 ~let || := Or
 ~let && := And
 
-~~ -------------------------
-~~ Church Numeral Operations
-~~ -------------------------
+~~ |---------------------------|
+~~ | Church Numeral Operations |
+~~ |---------------------------|
 
 ~let IsZero := λn.n (λx.False) True
 ~let Succ   := λn.λf.λx.f (n f x)
@@ -59,9 +59,9 @@
 ~let Min := λn.λm. <= n m n m
 ~let Max := λn.λm. >= n m n m
 
-~~ -----
-~~ Pairs
-~~ -----
+~~ |-------|
+~~ | Pairs |
+~~ |-------|
 
 ~let Pair := λa.λb.λp.p a b
 ~let <,>  := Pair
@@ -70,9 +70,9 @@
 ~let Second := λp.p False
 ~let Swap   := λp.<,> (Second p) (First p)
 
-~~ -----
-~~ Lists
-~~ -----
+~~ |-------|
+~~ | Lists |
+~~ |-------|
 
 ~let Nil  := λx.True
 ~let Cons := <,>
@@ -86,17 +86,17 @@
 ~let Drop  := λn.n Tail
 ~let Index := λl.λn.Head (Drop n l)
 
-~~ -----------------------
-~~ Fixed-point Combinators
-~~ -----------------------
+~~ |-------------------------|
+~~ | Fixed-point Combinators |
+~~ |-------------------------|
 
 ~let Y     := λf.(λx.f (x x)) (λx.f (x x))
 ~let Z     := λf.(λx.f (λy.x x y)) (λx.f (λy.x x y))
 ~let Theta := (λx.λy.y (x x y)) (λx.λy.y (x x y))
 
-~~ -------------------------------------------------------------------------
-~~ Recursion (Warning: These will diverge under applicative order reduction)
-~~ -------------------------------------------------------------------------
+~~ |---------------------------------------------------------------------------|
+~~ | Recursion (Warning: These will diverge under applicative order reduction) |
+~~ |---------------------------------------------------------------------------|
 
 ~let RFrom := λr.λn.:: n (r (Succ n))
 ~let From  := Y RFrom
@@ -127,9 +127,9 @@
 ~let Filter  := λp.Foldr (λh.λt.λr.(p h) (:: h r) r) []
 ~let Reverse := Foldl (λh.λt.λa.:: h a) []
 
-~~ ----------------
-~~ Mutual Recursion
-~~ ----------------
+~~ |------------------|
+~~ | Mutual Recursion |
+~~ |------------------|
 
 ~let Theta_2 := (λx.λf.λg.f (x x g f)) (λx.λf.λg.f (x x g f))
 
@@ -140,5 +140,5 @@
 ~let Odd  := Theta_2 ROdd REven
 
 ~let RFilterPrime := λr.λxs.:: (Head xs) (r (Filter (λn.Not (IsZero (% n (Head xs)))) (Tail xs)))
-~let  FilterPrime := Y RFilterPrime
+~let FilterPrime  := Y RFilterPrime
 ~let Primes := FilterPrime (From 2)

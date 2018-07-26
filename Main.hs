@@ -2,6 +2,7 @@
 
 module Main where
 
+import           Numeric
 import           Data.Char
 import           Data.List
 import qualified Data.Map as M
@@ -9,16 +10,15 @@ import           Data.Map (Map)
 import           Data.Time.Clock
 
 import System.IO
-import System.Directory
 import System.Exit
+import System.Directory
+import System.Console.Haskeline
+import System.Console.Haskeline.History
 
 import Control.Arrow
 import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Trans.State.Strict
-
-import System.Console.Haskeline
-import System.Console.Haskeline.History
 
 import Lambda
 import Parser
@@ -218,16 +218,13 @@ runTime t = do (s,p) <- (strat &&& getPrint . pprint) <$> lift get
                outputStrLn (p (getEval True s t))
                end   <- liftIO getCurrentTime
                ansiColour green
-               outputStr ("normalised in ")
+               outputStr "normalised in "
                ansiColour cyan
-               outputStr (display (diffUTCTime end start) ++ " seconds")
+               outputStr (showFFloat (Just 3) (realToFrac (diffUTCTime end start)) " seconds")
                ansiColour green
-               outputStr " with reduction strategy "
+               outputStr " with evaluation strategy "
                ansiColour cyan
                outputStrLn (show s)
-  where
-    display :: NominalDiffTime -> String
-    display x = show (fromIntegral (round (x * 1000)) / 1000 :: Double)
 
 {-
     When the ~script command is entered, first establish whether that file exists. If it does,
@@ -275,7 +272,7 @@ runPPrint :: Interpreter ()
 runPPrint = do s <- lift get
                lift (put (s { pprint = not (pprint s) }))
                ansiColour green
-               outputStr ("pretty printing ")
+               outputStr "pretty-printing "
                ansiColour cyan
                outputStrLn (if pprint s then "off" else "on")
 

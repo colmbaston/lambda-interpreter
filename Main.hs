@@ -182,9 +182,10 @@ runInput i = do s <- lift get
 
 {-
     Procedures to run inputs containing λ-terms. If a λ-term is entered, it is fully-evaluated
-    and printed according to the current evaluation and printing strategies. If a λ-term is
-    entered with the ~reductions command, intermediate reductions are also printed, along with
-    the number of reductions to reach that point.
+    and printed according to the current evaluation and printing strategies. If the ~reductions
+    command is entered, intermediate reductions are also printed, along with the number of
+    reductions taken to reach that point. If the ~time command is entered, the time to
+    normalise is displayed.
 -}
 
 getEval :: Bool -> EvalStrat -> (Term -> Term)

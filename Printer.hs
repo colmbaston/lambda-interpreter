@@ -5,74 +5,68 @@ module Printer
 )
 where
 
-import Prelude hiding (showList)
-
-import Numeric
-import Text.Show hiding (showList)
-import Data.Maybe
-import Control.Applicative
+import           Data.Maybe
+import           Control.Applicative
+import           Prelude   hiding (showList)
+import           Text.Show hiding (showList)
+import qualified Numeric  as N
 import qualified Data.Set as S
 
 import Lambda
 
-{-------------------------------------------------------------------------------
-
-Standard (non-pretty) printing function for lambda-terms.
-
+{-
+    A module for printing λ-terms. The basic Show instance is straightforward, using 'showsPrec'
+    to use as few parentheses are necessary due to precendence and association rules.
 -}
 
 instance Show Term where
     showsPrec _ (Var x)   = showString x
-    showsPrec p (Abs x y) = showParen (p > 4) $ showString ('λ' : x) . showChar '.' . showsPrec 4 y
-    showsPrec p (App x y) = showParen (p > 5) $ showsPrec 5 x . showChar ' ' . showsPrec 6 y
+    showsPrec p (Abs x y) = showParen (p > 1) (showString ('λ' : x) . showChar '.' . showsPrec 1 y)
+    showsPrec p (App x y) = showParen (p > 2) (showsPrec 2 x        . showChar ' ' . showsPrec 3 y)
 
-{-------------------------------------------------------------------------------
-
-Pretty printing function for lambda-terms. Uses difference lists, just like
-'show'.
-
-pShowTerm decides which pretty printing rule to use with Maybe's (<|>) choice
-operator, defaulting to the lambda-term's standard inline syntax with
-pShowTerm', and deciding whether to surround subterms with parentheses using
-its Bool argument.
-
+{-
+    The pretty-printing function detects whether it's printing a Church-numeral, a Church-pair,
+    or a list (represented by nested pairs), and displays them with special syntax.
 -}
 
 pShow :: Term -> String
 pShow t = pShowTerm False t ""
 
 pShowTerm :: Bool -> Term -> ShowS
-pShowTerm b t = fromJust $ showNumeral  t <|>
-                           showList t     <|>
-                           showPair t     <|>
-                           Just (showParen b $ pShowTerm' t)
+pShowTerm b t = fromMaybe (showParen b (go t)) (showInt t <|> showList t <|> showPair t)
+  where
+    go :: Term -> ShowS
+    go (Var x)   = showString x
+    go (Abs x y) = showString ('λ' : x)  . showChar '.' . pShowTerm False y
+    go (App x y) = pShowTerm (isAbs x) x . showChar ' ' . pShowTerm (not (isVar y)) y
 
+isVar :: Term -> Bool
+isVar (Var _) = True
+isVar _       = False
 
-pShowTerm' :: Term -> ShowS
-pShowTerm' (Var x)   = showString x
-pShowTerm' (Abs x y) = showString ('\x03bb' : x)
-                     . showChar '.'
-                     . pShowTerm False y
-pShowTerm' (App x y) = pShowTerm (isAbs x) x
-                     . showChar ' '
-                     . pShowTerm (isAbs y || isApp y) y
+isAbs :: Term -> Bool
+isAbs (Abs _ _) = True
+isAbs _         = False
 
-{-------------------------------------------------------------------------------
-
-Pretty printing functions for data types. Each runs a function (returning in
-Maybe) to convert a lambda-term to the respective data type, and then 'fmap's a
-showing function over the result.
-
-showRef looks up a reference name from a lambda-term in the environment (each
-element already swapped by pShow)
-
+{-
+    The 'toX' functions attempt to convert Church-numerals, Church-pairs, and lists to the Haskell
+    equivalents, then the 'showX' functions attempt to show them, failing if the conversion failed.
 -}
 
-showNumeral :: Term -> Maybe ShowS
-showNumeral = fmap showInt . toInt
+toInt :: Term -> Maybe Int
+toInt (Abs f (Abs x t)) | f /= x = go 0 t
+  where
+    go n (Var a)         | x == a = pure n
+    go n (App (Var a) b) | f == a = go (n+1) b
+    go _ _                        = Nothing
+toInt _ = Nothing
 
-showList :: Term -> Maybe ShowS
-showList = fmap (showListWith $ pShowTerm False) . toList
+showInt :: Term -> Maybe ShowS
+showInt = fmap N.showInt . toInt
+
+toPair :: Term -> Maybe (Term, Term)
+toPair (Abs x (App (App (Var y) u) v)) | x == y && x `notElem` freeVars u `S.union` freeVars v = pure (u,v)
+toPair _                                                                                       = Nothing
 
 showPair :: Term -> Maybe ShowS
 showPair = fmap (\(x,y) -> showChar '<'
@@ -81,43 +75,9 @@ showPair = fmap (\(x,y) -> showChar '<'
                          . pShowTerm False y
                          . showChar '>') . toPair
 
-{-------------------------------------------------------------------------------
-
-Functions to convert from lambda-terms to Haskell data types, so they may then
-be printed. This is simply done by pattern matching, with recursion in the toInt
-and toList cases.
-
--}
-
-toInt :: Term -> Maybe Int
-toInt (Abs f (Abs x t)) | f /= x = toInt' f x 0 t
-toInt _ = Nothing
-
-toInt' :: Name -> Name -> Int -> Term -> Maybe Int
-toInt' f x n (Var a)         | x == a = Just n
-toInt' f x n (App (Var a) b) | f == a = toInt' f x (n+1) b
-toInt' _ _ _ _ = Nothing
-
-toPair :: Term -> Maybe (Term, Term)
-toPair (Abs x (App (App (Var y) u) v)) | x == y && x `notElem` freeVars u `S.union` freeVars v = return (u,v)
-toPair _ = Nothing
-
 toList :: Term -> Maybe [Term]
 toList (Abs _ (Abs x (Abs y (Var z)))) | x == z && y /= z = return []
-toList t = do (x,y) <- toPair t
-              xs    <- toList y
-              return (x:xs)
-
-{-------------------------------------------------------------------------------
-
-Predicates used for computing arguments to showParen.
-
--}
-
-isAbs :: Term -> Bool
-isAbs (Abs _ _) = True
-isAbs _         = False
-
-isApp :: Term -> Bool
-isApp (App _ _) = True
-isApp _         = False
+toList t                                                  = do (x,y) <- toPair t
+                                                               (x:) <$> toList y
+showList :: Term -> Maybe ShowS
+showList = fmap (showListWith (pShowTerm False)) . toList

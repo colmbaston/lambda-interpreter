@@ -1,17 +1,21 @@
 module Parser where
 
+import           Data.Void
+import           Data.Char
 import qualified Data.Map as M
 import           Data.Map (Map)
-
-import Data.Char
-import Data.Void
-import Control.Monad
-import Text.Megaparsec
-import Text.Megaparsec.Char
+import           Control.Monad
+import           Text.Megaparsec
+import           Text.Megaparsec.Char
 
 import Lambda
 
--- TYPES
+{-
+    A module for parsing interpreter input from strings using the Megaparsec
+    library. As well as parsing raw λ-terms and interpreter commands, it
+    needs to be able to dereference names for λ-terms that have previously
+    been added to the interpreter environment via let commands.
+-}
 
 type Parser = Parsec Void String
 
@@ -25,7 +29,9 @@ data Input = Term Term
            | Exit
            | Comment
 
-data EvalStrat = Norm | Appl | Off
+data EvalStrat = Norm
+               | Appl
+               | Off
 
 parseInput :: Map String Term -> String -> Maybe Input
 parseInput env str = case parseMaybe inputParser str of
@@ -35,10 +41,9 @@ parseInput env str = case parseMaybe inputParser str of
                        Just (Let n t) -> Let n <$> mfilter (null . freeVars) (dereference env t)
                        i              -> i
 
--- UTILS
-
-insensitive :: String -> Parser String
-insensitive = try . mapM (\c -> char (toUpper c) <|> char (toLower c) >> return c)
+{-
+    Some useful parser combinators to augment the set of Megaparsec combinators.
+-}
 
 chainl1 :: Parser b -> Parser (b -> b -> b) -> Parser b
 chainl1 p op = p >>= rest
@@ -59,7 +64,32 @@ parens p = do char '('
               char ')'
               pure x
 
--- TERM PARSER
+insensitive :: String -> Parser String
+insensitive = try . mapM (\c -> char (toUpper c) <|> char (toLower c) >> return c)
+
+{-
+    The parser for λ-terms, loosely based on the following context-free grammar:
+
+     -> ABS   ::= λ VAR . ABS
+               |  APP
+
+        APP   ::= APP [space] ATOM
+               |  ATOM
+
+        ATOM  ::= VAR
+               |  NAT
+               |  IDENT
+               |  ( ABS )
+
+        VAR   ::= [non-empty string of lower-case letters]
+        NAT   ::= [non-empty string of decimal digits]
+        IDENT ::= [non-empty string of valid characters, not beginning with a lower-case letter or a decimal digit]
+
+    This is an unambiguous grammar that correctly handles the precedence and association
+    rules for abstractions and applications. The NAT nonterminal allows for Church-numerals
+    to be specified by their decimal representation, and the IDENT nonterminal allows λ-terms
+    in the interpreter environment to be referred to by their identifier.
+-}
 
 termParser :: Parser Term
 termParser = trim absLevel
@@ -71,25 +101,24 @@ absLevel = appLevel <|> do char '\\' <|> char 'λ'
                            Abs x <$> termParser
 
 appLevel :: Parser Term
-appLevel = chainl1 atomLevel (space1 >> pure App)
+appLevel = chainl1 atomLevel (const App <$> space1)
 
 atomLevel :: Parser Term
 atomLevel = Var <$> some (satisfy isValid) <|> parens absLevel
 
 isValid :: Char -> Bool
-isValid c = c `notElem` "\\λ.()"
-         && c >= '!'
-         && c <= '}'
+isValid c = c >= '!' && c <= '}' && c `notElem` "\\λ.()"
 
--- INPUT PARSER
+{-
+    Parser for interpreter inputs. Commands are strings beginning with a single '~', comments
+    contain only spaces or begin with two '~', and anything else is a λ-term.
+-}
 
 inputParser :: Parser Input
-inputParser = trim (try (char '~' >> commandParser)
-                <|> commentParser
-                <|> Term <$> termParser)
+inputParser = trim (try (char '~' >> commandParser) <|> commentParser <|> Term <$> termParser)
 
 commandParser :: Parser Input
-commandParser =  Let                          <$> (insensitive "let"        >> space1 >> ref) <*> (space1 >> string ":=" >> termParser)
+commandParser =  Let                          <$> (insensitive "let"        >> space1 >> ident) <*> (space1 >> string ":=" >> termParser)
              <|> Reds                         <$> (insensitive "reductions" >> space1 >> termParser)
              <|> Eval                         <$> (insensitive "eval"       >> space1 >> stratParser)
              <|> const PPrint                 <$>  insensitive "pprint"
@@ -98,13 +127,10 @@ commandParser =  Let                          <$> (insensitive "let"        >> s
              <|> const Help                   <$>  insensitive "help"
              <|> const Exit                   <$>  insensitive "exit"
 
-ref :: Parser String
-ref = do x <- some (satisfy isValid)
-         guard (isRefName x)
-         pure x
-
-isRefName :: String -> Bool
-isRefName = not . (\c -> isLower c || isDigit c) . head
+ident :: Parser String
+ident = do (x:xs) <- some (satisfy isValid)
+           guard (not (isLower x || isDigit x))
+           pure (x:xs)
 
 commentParser :: Parser Input
 commentParser =  const Comment <$> (string "~~" >> many anyChar)
@@ -115,14 +141,19 @@ stratParser =  const Norm <$> insensitive "norm"
            <|> const Appl <$> insensitive "appl"
            <|> const Off  <$> insensitive "off"
 
--- DEREFERENCING IDENTIFIERS AND NUMERALS
+{-
+    The λ-term parser initially parses NATs and IDENTs as variables, so we must deference
+    them with respect to a interpreter environment to obtain the actual λ-terms they represent.
+-}
 
 dereference :: Map String Term -> Term -> Maybe Term
-dereference env (Var x) | all isLower x = pure (Var x)
-                        | all isDigit x = pure (toNumeral (read x))
-                        | isRefName   x = M.lookup x env
-                        | otherwise     = Nothing
-dereference env t       = descendM (dereference env) t
+dereference e (Var x) | all isLower x = pure (Var x)
+                      | all isDigit x = pure (toNumeral (read x))
+                      | otherwise     = M.lookup x e
+dereference e t       = descendM (dereference e) t
 
 toNumeral :: Int -> Term
-toNumeral n = Abs "f" (Abs "x" (iterate (App (Var "f")) (Var "x") !! n))
+toNumeral n = Abs "f" (Abs "x" (go n))
+  where
+    go 0 = Var "x"
+    go n = App (Var "f") (go (n-1))

@@ -100,7 +100,7 @@ captureAvoid' ns (Abs x y) | x `elem` ns = Abs x' (captureAvoid' ns y')
 captureAvoid' ns t         = descend (captureAvoid' ns) t
 
 freshName :: Set Name -> Name -> Name
-freshName ns = head . dropWhile (`notElem` ns) . iterate nextName
+freshName ns = head . dropWhile (`elem` ns) . iterate nextName
 
 nextName :: Name -> Name
 nextName []       = "a"

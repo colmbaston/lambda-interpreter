@@ -39,6 +39,10 @@ instance Show EvalStrat where
   show Appl = "appl"
   show Off  = "off"
 
+-- this keeps chaning across different versions, so I define it myself
+nextChar :: Parser Char
+nextChar = satisfy (const True)
+
 parseInput :: Map String Term -> String -> Maybe Input
 parseInput env str = case parseMaybe inputParser str of
                        Nothing        -> Nothing
@@ -130,7 +134,7 @@ commandParser =  Let                          <$> (insensitive "let"        >> s
              <|> Time                         <$> (insensitive "time"       >> space1 >> termParser)
              <|> Eval                         <$> (insensitive "eval"       >> space1 >> stratParser)
              <|> const PPrint                 <$>  insensitive "pprint"
-             <|> Script                       <$> (insensitive "script"     >> space1 >> reverse . dropWhile isSpace . reverse <$> some anyChar)
+             <|> Script                       <$> (insensitive "script"     >> space1 >> reverse . dropWhile isSpace . reverse <$> some nextChar)
              <|> const (Script "lib/Prelude") <$>  insensitive "prelude"
              <|> const Help                   <$>  insensitive "help"
              <|> const Exit                   <$>  insensitive "exit"
@@ -141,7 +145,7 @@ ident = do (x:xs) <- some (satisfy isValid)
            pure (x:xs)
 
 commentParser :: Parser Input
-commentParser =  const Comment <$> (string "~~" >> many anyChar)
+commentParser =  const Comment <$> (string "~~" >> many nextChar)
              <|> const Comment <$> eof
 
 stratParser :: Parser EvalStrat

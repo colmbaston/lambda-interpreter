@@ -10,6 +10,7 @@ import           Data.Map (Map)
 import           Data.Time.Clock
 
 import System.IO
+import System.IO.Echo
 import System.Exit
 import System.Directory
 import System.Console.Haskeline
@@ -80,7 +81,7 @@ getInput = getInputLine "\ESC[1;36m~>\ESC[m " >>= \case
                                                                    pure (Just x)
 
 settings :: Settings (StateT InterpreterState IO)
-settings = Settings (completeWord Nothing " " completions) (Just ".history") False
+settings = Settings (completeWord Nothing " ()\\." completions) (Just ".history") False
   where
     completions :: String -> StateT InterpreterState IO [Completion]
     completions xs@('~':_) = pure (makeComp (prefixes xs ["~eval",
@@ -97,12 +98,12 @@ settings = Settings (completeWord Nothing " " completions) (Just ".history") Fal
                                   then do ansiSave
                                           ansiColour red
                                           liftIO (putStr ("\npress y to display all " ++ show l ++ " options"))
-                                          c <- liftIO getChar
+                                          c <- liftIO (withoutInputEcho getChar)
                                           ansiErase
                                           ansiScroll
                                           ansiRestore
-                                          pure (if c == 'y' || c == 'Y' then makeComp ks else [])
-                                  else    pure (makeComp ks)
+                                          pure (if toLower c == 'y' then makeComp ks else [])
+                                  else do pure (makeComp ks)
 
     prefixes :: String -> [String] -> [String]
     prefixes xs = filter ((map toLower xs `isPrefixOf`) . map toLower)

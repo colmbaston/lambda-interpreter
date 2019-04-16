@@ -91,7 +91,8 @@ settings = Settings (completeWord Nothing " ()\\." completions) (Just ".history"
                                                           "~pprint",
                                                           "~prelude",
                                                           "~reductions",
-                                                          "~script"]))
+                                                          "~script",
+                                                          "~time"]))
     completions xs         = do ks <- prefixes xs . M.keys . env <$> get
                                 let l = length ks
                                 if l >= 50

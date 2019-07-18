@@ -68,17 +68,20 @@ ansiErase = liftIO (putStr "\ESC[1K")
 ansiScroll :: MonadIO m => m ()
 ansiScroll = liftIO (putStr "\ESC[1T")
 
+prompt :: String
+prompt = "\ESC[1;36m~>\ESC[m "
+
 {-
     Configuration for the 'InputT' monad transformer which controls the
     behaviour of reading lines from stdin, input history, and tab-completion.
 -}
 
 getInput :: MonadException m => InputT m (Maybe String)
-getInput = getInputLine "\ESC[1;36m~>\ESC[m " >>= \case
-                                                     Nothing -> pure Nothing
-                                                     Just  x -> do unless (all isSpace x)
-                                                                     (modifyHistory (addHistoryUnlessConsecutiveDupe x))
-                                                                   pure (Just x)
+getInput = getInputLine prompt >>= \case
+                                      Nothing -> pure Nothing
+                                      Just  x -> do unless (all isSpace x)
+                                                      (modifyHistory (addHistoryUnlessConsecutiveDupe x))
+                                                    pure (Just x)
 
 settings :: Settings (StateT InterpreterState IO)
 settings = Settings (completeWord Nothing " ()\\." completions) (Just ".history") False
@@ -96,14 +99,13 @@ settings = Settings (completeWord Nothing " ()\\." completions) (Just ".history"
     completions xs         = do ks <- prefixes xs . M.keys . env <$> get
                                 let l = length ks
                                 if l >= 50
-                                  then do ansiSave
-                                          ansiColour red
+                                  then do ansiColour red
                                           liftIO (putStr ("\npress y to display all " ++ show l ++ " options"))
+                                          ansiColour reset
                                           c <- liftIO (withoutInputEcho getChar)
-                                          ansiErase
-                                          ansiScroll
-                                          ansiRestore
-                                          pure (if toLower c == 'y' then makeComp ks else [])
+                                          if toLower c == 'y'
+                                            then pure (makeComp ks)
+                                            else liftIO (putStr ('\n' :prompt)) >> pure []
                                   else do pure (makeComp ks)
 
     prefixes :: String -> [String] -> [String]

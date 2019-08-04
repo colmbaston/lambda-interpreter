@@ -91,6 +91,7 @@ betaReduce t = let App (Abs x y) z = captureAvoid t
 
 captureAvoid :: Term -> Term
 captureAvoid (App (Abs x y) z) = App (captureAvoid' (freeVars z) (Abs x y)) z
+captureAvoid _                 = error "never call captureAvoid on a non-redex!"
 
 captureAvoid' :: Set Name -> Term -> Term
 captureAvoid' ns (Abs x y) | x `elem` ns = Abs x' (captureAvoid' ns y')

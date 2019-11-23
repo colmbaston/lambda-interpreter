@@ -10,15 +10,23 @@ module Lambda
     normalise,
     reductions,
     normEval,
-    applEval
+    applEval,
 )
 where
 
+import Data.Foldable
 import           Data.Maybe
 import           Data.Set (Set)
 import qualified Data.Set as S
 import           Data.Map (Map)
 import qualified Data.Map as M
+
+import qualified Data.IntMap as IM
+import           Data.IntMap (IntMap)
+
+import Data.Function
+
+import Control.Monad.State.Strict
 
 {-
     A module implementing the core Term type, and functions for
@@ -70,7 +78,7 @@ descend f (App x y) = App (f x) (f y)
 
 descendA :: Applicative f => (Term -> f Term) -> Term -> f Term
 descendA _ (Var x)   = pure (Var x)
-descendA f (Abs x y) = Abs x <$> f y
+descendA f (Abs x y) = Abs       x <$> f y
 descendA f (App x y) = App <$> f x <*> f y
 
 {-
@@ -79,34 +87,34 @@ descendA f (App x y) = App <$> f x <*> f y
 
 substitute :: Name -> Term -> Term -> Term
 substitute a t (Var x)   = if x == a then t       else Var x
-substitute a t (Abs x y) = if x == a then Abs x y else Abs x (substitute a t y)
-substitute a t x         = descend (substitute a t) x
+substitute a t (App x y) = App (substitute a t x) (substitute a t y)
+substitute a t (Abs x y) | a == x           = Abs x y
+                         | S.notMember x fv = Abs x  (substitute a t y)
+                         | otherwise        = Abs fn (substitute a t (rename x fn y))
+                         where
+                           fv = freeVars t
+                           bad = S.insert a (fv `S.union` allVars y)
+                           fn = nextName (maximumBy compareNames bad)
 
 rename :: Name -> Name -> Term -> Term
 rename a = substitute a . Var
 
-betaReduce :: Term -> Term
-betaReduce t = let App (Abs x y) z = captureAvoid t
-               in  substitute x z y
-
-captureAvoid :: Term -> Term
-captureAvoid (App (Abs x y) z) = App (captureAvoid' (freeVars z) (Abs x y)) z
-captureAvoid _                 = error "never call captureAvoid on a non-redex!"
-
-captureAvoid' :: Set Name -> Term -> Term
-captureAvoid' ns (Abs x y) | x `elem` ns = Abs x' (captureAvoid' ns y')
-                           | otherwise   = Abs x  (captureAvoid' ns y)
-                           where x'    = freshName (allVars y) x
-                                 y'    = rename x x' y
-captureAvoid' ns t         = descend (captureAvoid' ns) t
-
 freshName :: Set Name -> Name -> Name
-freshName ns = head . dropWhile (`elem` ns) . iterate nextName
+freshName ns = head . dropWhile (`S.member` ns) . iterate nextName
 
 nextName :: Name -> Name
 nextName []       = "a"
 nextName ('z':xs) = 'a' : nextName xs
 nextName ( x :xs) = succ x : xs
+
+compareNames :: Name -> Name -> Ordering
+compareNames = compareLength <> compare `on` reverse
+  where
+    compareLength :: [a] -> [a] -> Ordering
+    compareLength []     []     = EQ
+    compareLength []     (_:_)  = LT
+    compareLength (_:_)  []     = GT
+    compareLength (_:xs) (_:ys) = compareLength xs ys
 
 {-
     Functions for performing single reduction steps, for the normal order
@@ -121,17 +129,17 @@ isNF (Abs _ y)         = isNF y
 isNF (App x y)         = isNF x && isNF y
 
 normOrder :: Term -> Term
-normOrder r@(App (Abs _ _) _) = betaReduce r
-normOrder (App x y)           | isNF x    = App x (normOrder y)
-                              | otherwise = App (normOrder x) y
-normOrder t                   = descend normOrder t
+normOrder (App (Abs x y) z) = substitute x z y
+normOrder (App x y)         | isNF x    = App x (normOrder y)
+                            | otherwise = App (normOrder x) y
+normOrder t                 = descend normOrder t
 
 applOrder :: Term -> Term
-applOrder r@(App a@(Abs _ _) z) | isNF z   = betaReduce r
-                                | otherwise = App a (applOrder z)
-applOrder (App x y)             | isNF x   = App x (applOrder y)
-                                | otherwise = App (applOrder x) y
-applOrder t                     = descend applOrder t
+applOrder (App (Abs x y) z) | isNF z    = substitute x z y
+                            | otherwise = App (Abs x y) (applOrder z)
+applOrder (App x y)         | isNF x    = App x (applOrder y)
+                            | otherwise = App (applOrder x) y
+applOrder t                 = descend applOrder t
 
 normalise :: (Term -> Term) -> Term -> Term
 normalise f = go
@@ -149,14 +157,40 @@ reductions f = go
 -}
 
 normEval :: Term -> Term
-normEval r@(App (Abs _ _) _)   = normEval $ betaReduce r
+normEval (App (Abs x y) z)     = normEval (substitute x z y)
 normEval (App x y) | isNF x    = App x (normEval y)
                    | otherwise = normEval $ App (normOrder x) y
 normEval t                     = descend normEval t
 
 applEval :: Term -> Term
-applEval (App a@(Abs _ _) z)   = let z' = applEval z in
-                                 z' `seq` applEval (betaReduce $ App a z')
+applEval (App (Abs x y) z)     = let z' = applEval z in
+                                 z' `seq` applEval (substitute x z y)
 applEval (App x y) | isNF x    = App x (applEval y)
                    | otherwise = applEval $ App (applOrder x) y
 applEval t                     = descend applEval t
+
+{-
+    Graph representation of λ-terms for lazy evaluation
+-}
+
+data LTerm = LVar Name
+           | LRef Int
+           | LAbs Name  LTerm
+           | LApp LTerm LTerm
+
+data Lazy = Lazy { root :: LTerm, refs :: IntMap LTerm }
+
+toLazy :: Term -> Lazy
+toLazy t = Lazy (go t) IM.empty
+  where
+    go (Var x)   = LVar x
+    go (Abs x y) = LAbs     x (go y)
+    go (App x y) = LApp (go x) (go y)
+
+fromLazy :: Lazy -> Maybe Term
+fromLazy (Lazy lt refs) = go lt
+  where
+    go (LVar x)   = Just (Var x)
+    go (LAbs x y) = Abs        x <$> go y
+    go (LApp x y) = App <$> go x <*> go y
+    go (LRef k)   = IM.lookup k refs >>= go

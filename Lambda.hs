@@ -97,10 +97,9 @@ substitute a t (Abs x y) | a == x           = Abs x y
                            fn = nextName (maximumBy compareNames bad)
 
 rename :: Name -> Name -> Term -> Term
-rename a = substitute a . Var
-
-freshName :: Set Name -> Name -> Name
-freshName ns = head . dropWhile (`S.member` ns) . iterate nextName
+rename a b (Var x)   = if x == a then Var b else Var x
+rename a b (Abs x y) = if a == x then Abs x y else Abs x (rename a b y)
+rename a b t         = descend (rename a b) t
 
 nextName :: Name -> Name
 nextName []       = "a"

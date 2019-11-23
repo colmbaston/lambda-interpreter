@@ -98,15 +98,13 @@
 ~~ | Recursion (Warning: These will diverge under applicative order reduction) |
 ~~ |---------------------------------------------------------------------------|
 
-~let From   := Y (λr.λn.:: n (r (Succ n)))
 ~let Fact   := Y (λr.λn.(IsZero n) 1 (* n (r (Pred n))))
 ~let DivMod := Y (λr.λq.λm.λn.(< m n) (<,> q m) (r (Succ q) (- m n) n)) 0
 
-~let Div := λm.λn.First (DivMod m n)
+~let Div := λm.λn.First  (DivMod m n)
 ~let Mod := λm.λn.Second (DivMod m n)
-
-~let / := Div
-~let % := Mod
+~let /   := Div
+~let %   := Mod
 
 ~let Take  := Y (λr.λn.λl.(IsZero n) [] (:: (Head l) (r (Pred n) (Tail l))))
 ~let Foldr := λf.λx.Y (λr.λl.Null l x (f (Head l) (Tail l) (r (Tail l))))
@@ -120,8 +118,11 @@
 ~let Filter  := λp.Foldr (λh.λt.λr.(p h) (:: h r) r) []
 ~let Reverse := Foldl (λh.λt.λa.:: h a) []
 
+~let Iterate := Y (λr.λf.λx.:: x (r f (f x)))
+~let From    := Iterate Succ
+
 ~let FilterPrime := λr.λxs.:: (Head xs) (r (Filter (λn.Not (IsZero (% n (Head xs)))) (Tail xs)))
-~let Primes      := Y FilterPrime (From 2)
+~let Primes      := :: 2 (Y FilterPrime (Iterate (λx.Succ (Succ x)) 3))
 
 ~~ |------------------|
 ~~ | Mutual Recursion |

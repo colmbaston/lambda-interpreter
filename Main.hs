@@ -1,4 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE BangPatterns #-}
 
 module Main where
 
@@ -87,7 +88,8 @@ settings :: Settings (StateT InterpreterState IO)
 settings = Settings (completeWord Nothing " ()\\." completions) (Just ".history") False
   where
     completions :: String -> StateT InterpreterState IO [Completion]
-    completions xs@('~':_) = pure (makeComp (prefixes xs ["~eval",
+    completions xs@('~':_) = pure (makeComp (prefixes xs ["~count",
+                                                          "~eval",
                                                           "~exit",
                                                           "~help",
                                                           "~let",
@@ -173,9 +175,10 @@ parseError = do ansiColour red
 runInput :: Input -> Interpreter ()
 runInput i = do s <- lift get
                 case i of
-                  Term t   -> interruptible (runTerm t)
-                  Reds t   -> interruptible (runReds t)
-                  Time t   -> interruptible (runTime t)
+                  Term  t  -> interruptible (runTerm  t)
+                  Reds  t  -> interruptible (runReds  t)
+                  Time  t  -> interruptible (runTime  t)
+                  Count t  -> interruptible (runCount t)
                   Let n t  -> lift (put s{ env = M.insert n t (env s) })
                   Script f -> runScript f
                   Eval e   -> lift (put s{ strat = e })
@@ -229,6 +232,21 @@ runTime t = do (s,p) <- (strat &&& getPrint . pprint) <$> lift get
                outputStr " with evaluation strategy "
                ansiColour cyan
                outputStrLn (show s)
+
+runCount :: Term -> Interpreter ()
+runCount t = do (s,p) <- (strat &&& getPrint . pprint) <$> lift get
+                let (le,la) = foldl (\(!le,_) la -> (le+1, la)) (-1, undefined) (reductions (getEval False s) t)
+                outputStrLn (p la)
+                ansiColour green
+                outputStr "normalised in "
+                ansiColour cyan
+                outputStr (show le)
+                outputStr " β-reduction"
+                when (le /= 1) (outputStr "s")
+                ansiColour green
+                outputStr " with evaluation strategy "
+                ansiColour cyan
+                outputStrLn (show s)
 
 {-
     When the ~script command is entered, first establish whether that file exists. If it does,

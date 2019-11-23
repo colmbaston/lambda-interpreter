@@ -19,9 +19,10 @@ import Lambda
 
 type Parser = Parsec Void String
 
-data Input = Term Term
-           | Reds Term
-           | Time Term
+data Input = Term  Term
+           | Reds  Term
+           | Time  Term
+           | Count Term
            | Let String Term
            | Script FilePath
            | Eval EvalStrat
@@ -46,9 +47,10 @@ nextChar = satisfy (const True)
 parseInput :: Map String Term -> String -> Maybe Input
 parseInput env str = case parseMaybe inputParser str of
                        Nothing        -> Nothing
-                       Just (Term t)  -> Term  <$> dereference env t
-                       Just (Reds t)  -> Reds  <$> dereference env t
-                       Just (Time t)  -> Time  <$> dereference env t
+                       Just (Term  t) -> Term  <$> dereference env t
+                       Just (Reds  t) -> Reds  <$> dereference env t
+                       Just (Time  t) -> Time  <$> dereference env t
+                       Just (Count t) -> Count <$> dereference env t
                        Just (Let n t) -> Let n <$> mfilter (null . freeVars) (dereference env t)
                        i              -> i
 
@@ -132,6 +134,7 @@ commandParser :: Parser Input
 commandParser =  Let                          <$> (insensitive "let"        >> space1 >> ident) <*> (space1 >> string ":=" >> termParser)
              <|> Reds                         <$> (insensitive "reductions" >> space1 >> termParser)
              <|> Time                         <$> (insensitive "time"       >> space1 >> termParser)
+             <|> Count                        <$> (insensitive "count"      >> space1 >> termParser)
              <|> Eval                         <$> (insensitive "eval"       >> space1 >> stratParser)
              <|> const PPrint                 <$>  insensitive "pprint"
              <|> Script                       <$> (insensitive "script"     >> space1 >> reverse . dropWhile isSpace . reverse <$> some nextChar)

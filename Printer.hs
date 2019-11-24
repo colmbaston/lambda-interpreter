@@ -15,16 +15,6 @@ import qualified Data.Set as S
 import Lambda
 
 {-
-    A module for printing λ-terms. The basic Show instance is straightforward, using 'showsPrec'
-    to use as few parentheses are necessary due to precendence and association rules.
--}
-
-instance Show Term where
-    showsPrec _ (Var x)   = showString x
-    showsPrec p (Abs x y) = showParen (p > 1) (showString ('λ' : x) . showChar '.' . showsPrec 1 y)
-    showsPrec p (App x y) = showParen (p > 2) (showsPrec 2 x        . showChar ' ' . showsPrec 3 y)
-
-{-
     The pretty-printing function detects whether it's printing a Church-numeral, a Church-pair,
     or a list (represented by nested pairs), and displays them with special syntax.
 -}

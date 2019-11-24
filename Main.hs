@@ -310,7 +310,7 @@ runHelp = do ansiColour green
                                ,"    ~reductions t -> evaluate λ-term t, outputting intermediate reductions"
                                ,"    ~let n := t   -> place λ-term t into the environment, bound to name n"
                                ,"    ~script f     -> run a script of interpreter commands"
-                               ,"    ~prelude      -> shorthand for \"~script lib/Prelude\""
+                               ,"    ~prelude      -> shorthand for \"~script lib/prelude\""
                                ,"    ~eval s       -> switch to evaluation strategy s"
                                ,"    ~pprint       -> toggle pretty-printing between on (the default) and off"
                                ,"    ~help         -> output this message"

@@ -14,18 +14,15 @@ module Lambda
 )
 where
 
-import Data.Foldable
 import           Data.Maybe
 import           Data.Set (Set)
 import qualified Data.Set as S
 import           Data.Map (Map)
 import qualified Data.Map as M
-
 import qualified Data.IntMap as IM
 import           Data.IntMap (IntMap)
-
+import           Data.Foldable
 import Data.Function
-
 import Control.Monad.State.Strict
 
 {-
@@ -66,6 +63,13 @@ eqTerm n m1 m2 (Abs x y) (Abs a b) = eqTerm (n+1) (M.insert x n m1) (M.insert a 
 eqTerm n m1 m2 (App x y) (App a b) = eqTerm n m1 m2 x a && eqTerm n m1 m2 y b
 eqTerm _ _ _ _ _ = False
 
+instance Show Term where
+    showsPrec _ (Var x)   = showString x
+    showsPrec p (Abs x y) = showParen (p > 1) (showString ('λ' : x) . showChar '.' . showsPrec 1 y)
+    showsPrec p (App x y) = showParen (p > 2) (showsPrec 2 x        . showChar ' ' . showsPrec 3 y)
+
+
+
 {-
     Abstracts a common pattern when working with λ-terms, allowing functions
     to pass their recursive calls to 'decend' in catch-all patterns.
@@ -82,32 +86,40 @@ descendA f (Abs x y) = Abs       x <$> f y
 descendA f (App x y) = App <$> f x <*> f y
 
 {-
-    Functions for performing substitution and dealing with name capture.
+    Functions for performing substitution and dealing with name capture. Naive
+    substitution doesn't check for name capture, and is used as a more efficient
+    version of the capture-avoiding substitution function where we know name
+    capture can't occur.
 -}
 
-substitute :: Name -> Term -> Term -> Term
-substitute a t (Var x)   = if x == a then t       else Var x
-substitute a t (App x y) = App (substitute a t x) (substitute a t y)
-substitute a t (Abs x y) | a == x           = Abs x y
-                         | S.notMember x fv = Abs x  (substitute a t y)
-                         | otherwise        = Abs fn (substitute a t (rename x fn y))
-                         where
-                           fv = freeVars t
-                           bad = S.insert a (fv `S.union` allVars y)
-                           fn = nextName (maximumBy compareNames bad)
 
-rename :: Name -> Name -> Term -> Term
-rename a b (Var x)   = if x == a then Var b else Var x
-rename a b (Abs x y) = if a == x then Abs x y else Abs x (rename a b y)
+beta :: Name -> Term -> Term -> Term
+beta x z y = substitute (freeVars z) x z y
+
+substitute :: Set Name -> Name -> Term -> Term -> Term
+substitute fv a t (Var x)   = if x == a then t else Var x
+substitute fv a t (App x y) = App (substitute fv a t x) (substitute fv a t y)
+substitute fv a t (Abs x y) | a == x           = Abs x y
+                            | S.notMember x fv = Abs x  (substitute fv a t y)
+                            | otherwise        = Abs fn (substitute fv a t (rename x (Var fn) y))
+                            where
+                              fn = nextName (maximumBy compareNames (S.insert x (fv `S.union` allVars y)))
+
+rename :: Name -> Term -> Term -> Term
+rename a b (Var x)   = if x == a then b   else Var x
+rename a b (Abs x y) = if x == a then Abs x y else Abs x (rename a b y)
 rename a b t         = descend (rename a b) t
 
+
 nextName :: Name -> Name
-nextName []       = "a"
-nextName ('z':xs) = 'a' : nextName xs
-nextName ( x :xs) = succ x : xs
+nextName = reverse . bump . reverse
+  where
+    bump ""       = "a"
+    bump ('z':xs) = 'a' : nextName xs
+    bump ( x :xs) = succ x : xs
 
 compareNames :: Name -> Name -> Ordering
-compareNames = compareLength <> compare `on` reverse
+compareNames = compareLength <> compare
   where
     compareLength :: [a] -> [a] -> Ordering
     compareLength []     []     = EQ
@@ -128,13 +140,13 @@ isNF (Abs _ y)         = isNF y
 isNF (App x y)         = isNF x && isNF y
 
 normOrder :: Term -> Term
-normOrder (App (Abs x y) z) = substitute x z y
+normOrder (App (Abs x y) z) = beta x z y
 normOrder (App x y)         | isNF x    = App x (normOrder y)
                             | otherwise = App (normOrder x) y
 normOrder t                 = descend normOrder t
 
 applOrder :: Term -> Term
-applOrder (App (Abs x y) z) | isNF z    = substitute x z y
+applOrder (App (Abs x y) z) | isNF z    = beta x z y
                             | otherwise = App (Abs x y) (applOrder z)
 applOrder (App x y)         | isNF x    = App x (applOrder y)
                             | otherwise = App (applOrder x) y
@@ -156,40 +168,14 @@ reductions f = go
 -}
 
 normEval :: Term -> Term
-normEval (App (Abs x y) z)     = normEval (substitute x z y)
+normEval (App (Abs x y) z)     = normEval (beta x z y)
 normEval (App x y) | isNF x    = App x (normEval y)
-                   | otherwise = normEval $ App (normOrder x) y
+                   | otherwise = normEval (App (normOrder x) y)
 normEval t                     = descend normEval t
 
 applEval :: Term -> Term
 applEval (App (Abs x y) z)     = let z' = applEval z in
-                                 z' `seq` applEval (substitute x z y)
+                                 z' `seq` applEval (beta x z y)
 applEval (App x y) | isNF x    = App x (applEval y)
-                   | otherwise = applEval $ App (applOrder x) y
+                   | otherwise = applEval (App (applOrder x) y)
 applEval t                     = descend applEval t
-
-{-
-    Graph representation of λ-terms for lazy evaluation
--}
-
-data LTerm = LVar Name
-           | LRef Int
-           | LAbs Name  LTerm
-           | LApp LTerm LTerm
-
-data Lazy = Lazy { root :: LTerm, refs :: IntMap LTerm }
-
-toLazy :: Term -> Lazy
-toLazy t = Lazy (go t) IM.empty
-  where
-    go (Var x)   = LVar x
-    go (Abs x y) = LAbs     x (go y)
-    go (App x y) = LApp (go x) (go y)
-
-fromLazy :: Lazy -> Maybe Term
-fromLazy (Lazy lt refs) = go lt
-  where
-    go (LVar x)   = Just (Var x)
-    go (LAbs x y) = Abs        x <$> go y
-    go (LApp x y) = App <$> go x <*> go y
-    go (LRef k)   = IM.lookup k refs >>= go

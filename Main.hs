@@ -21,6 +21,7 @@ import Control.Arrow
 import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Trans.State.Strict
+import Control.Monad.Catch
 
 import Lambda
 import Parser
@@ -77,7 +78,7 @@ prompt = "\ESC[1;36m~>\ESC[m "
     behaviour of reading lines from stdin, input history, and tab-completion.
 -}
 
-getInput :: MonadException m => InputT m (Maybe String)
+getInput :: (MonadIO m, MonadMask m) => InputT m (Maybe String)
 getInput = getInputLine prompt >>= \case
                                       Nothing -> pure Nothing
                                       Just  x -> do unless (all isSpace x)
@@ -116,9 +117,8 @@ settings = Settings (completeWord Nothing " ()\\." completions) (Just ".history"
     makeComp :: [String] -> [Completion]
     makeComp = map (\x -> Completion x ("\ESC[1;32m" ++ x ++ "\ESC[m") True)
 
-interruptible :: MonadException m => InputT m a -> InputT m ()
-interruptible x = handle (\Interrupt -> do outputStrLn "\ESC[1;31minterrupted"
-                                           ansiColour reset) (withInterrupt (void x))
+interruptible :: (MonadIO m, MonadMask m) => InputT m a -> InputT m ()
+interruptible x = handle (\Interrupt -> outputStrLn "\ESC[1;31minterrupted" >> ansiColour reset) (withInterrupt (void x))
 
 {-
     The entry-point to the program. Set IO buffering mode, print a welcome message and run

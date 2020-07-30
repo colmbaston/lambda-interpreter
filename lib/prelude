@@ -64,18 +64,17 @@
 ~~ |-------|
 
 ~let Pair := λa.λb.λp.p a b
-~let <,>  := Pair
 
 ~let First  := λp.p True
 ~let Second := λp.p False
-~let Swap   := λp.<,> (Second p) (First p)
+~let Swap   := λp.Pair (Second p) (First p)
 
 ~~ |-------|
 ~~ | Lists |
 ~~ |-------|
 
 ~let Nil  := λx.True
-~let Cons := <,>
+~let Cons := Pair
 ~let Head := First
 ~let Tail := Second
 
@@ -99,7 +98,7 @@
 ~~ |---------------------------------------------------------------------------|
 
 ~let Fact   := Y (λr.λn.(IsZero n) 1 (* n (r (Pred n))))
-~let DivMod := Y (λr.λq.λm.λn.(< m n) (<,> q m) (r (Succ q) (- m n) n)) 0
+~let DivMod := Y (λr.λq.λm.λn.(< m n) (Pair q m) (r (Succ q) (- m n) n)) 0
 
 ~let Div := λm.λn.First  (DivMod m n)
 ~let Mod := λm.λn.Second (DivMod m n)
@@ -128,10 +127,8 @@
 ~~ | Mutual Recursion |
 ~~ |------------------|
 
-~let Theta_2 := (λx.λf.λg.f (x x g f)) (λx.λf.λg.f (x x g f))
-
 ~let REven := λr.λn.(IsZero n) True  (r (Pred n))
 ~let ROdd  := λr.λn.(IsZero n) False (r (Pred n))
 
-~let Even := Theta_2 REven ROdd
-~let Odd  := Theta_2 ROdd REven
+~let Even := Y (λx.REven (ROdd  x))
+~let Odd  := Y (λx.ROdd  (REven x))

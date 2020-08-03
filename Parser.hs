@@ -114,7 +114,7 @@ absLevel = appLevel <|> do char '\\' <|> char 'λ'
                            Abs x <$> termParser
 
 appLevel :: Parser Term
-appLevel = chainl1 atomLevel (const App <$> space1)
+appLevel = chainl1 atomLevel (App <$ space1)
 
 atomLevel :: Parser Term
 atomLevel = Var <$> some (satisfy isValid) <|> parens absLevel
@@ -131,16 +131,16 @@ inputParser :: Parser Input
 inputParser = trim (try (char '~' >> commandParser) <|> commentParser <|> Term <$> termParser)
 
 commandParser :: Parser Input
-commandParser =  Let                          <$> (insensitive "let"        >> space1 >> ident) <*> (space1 >> string ":=" >> termParser)
-             <|> Reds                         <$> (insensitive "reductions" >> space1 >> termParser)
-             <|> Time                         <$> (insensitive "time"       >> space1 >> termParser)
-             <|> Count                        <$> (insensitive "count"      >> space1 >> termParser)
-             <|> Eval                         <$> (insensitive "eval"       >> space1 >> stratParser)
-             <|> const PPrint                 <$>  insensitive "pprint"
-             <|> Script                       <$> (insensitive "script"     >> space1 >> reverse . dropWhile isSpace . reverse <$> some nextChar)
-             <|> const (Script "lib/prelude") <$>  insensitive "prelude"
-             <|> const Help                   <$>  insensitive "help"
-             <|> const Exit                   <$>  insensitive "exit"
+commandParser =  Let                  <$> (insensitive "let"        >> space1 >> ident) <*> (space1 >> string ":=" >> termParser)
+             <|> Reds                 <$> (insensitive "reductions" >> space1 >> termParser)
+             <|> Time                 <$> (insensitive "time"       >> space1 >> termParser)
+             <|> Count                <$> (insensitive "count"      >> space1 >> termParser)
+             <|> Eval                 <$> (insensitive "eval"       >> space1 >> stratParser)
+             <|> PPrint               <$   insensitive "pprint"
+             <|> Script               <$> (insensitive "script"     >> space1 >> reverse . dropWhile isSpace . reverse <$> some nextChar)
+             <|> Script "lib/prelude" <$   insensitive "prelude"
+             <|> Help                 <$   insensitive "help"
+             <|> Exit                 <$   insensitive "exit"
 
 ident :: Parser String
 ident = do (x:xs) <- some (satisfy isValid)
@@ -148,13 +148,13 @@ ident = do (x:xs) <- some (satisfy isValid)
            pure (x:xs)
 
 commentParser :: Parser Input
-commentParser =  const Comment <$> (string "~~" >> many nextChar)
-             <|> const Comment <$> eof
+commentParser =  Comment <$ (string "~~" >> many nextChar)
+             <|> Comment <$  eof
 
 stratParser :: Parser EvalStrat
-stratParser =  const Norm <$> insensitive "norm"
-           <|> const Appl <$> insensitive "appl"
-           <|> const Off  <$> insensitive "off"
+stratParser =  Norm <$ insensitive "norm"
+           <|> Appl <$ insensitive "appl"
+           <|> Off  <$ insensitive "off"
 
 {-
     The λ-term parser initially parses NATs and IDENTs as variables, so we must deference

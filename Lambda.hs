@@ -94,7 +94,7 @@ descendA f (App x y) = App <$> f x <*> f y
 
 
 beta :: Name -> Term -> Term -> Term
-beta x z y = substitute (freeVars z) x z y
+beta x z = substitute (freeVars z) x z
 
 substitute :: Set Name -> Name -> Term -> Term -> Term
 substitute fv a t (Var x)   = if x == a then t else Var x

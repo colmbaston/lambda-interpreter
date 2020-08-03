@@ -166,7 +166,7 @@ ascii = "     ______                __                           __        ___  
 
 interpret :: Interpreter ()
 interpret = do e <- env <$> lift get
-               (parseInput e =<<) <$> getInput >>= maybe parseError runInput
+               getInput >>= maybe parseError runInput . (parseInput e =<<)
 
 parseError :: Interpreter ()
 parseError = do ansiColour red
@@ -264,10 +264,10 @@ runScript f = do ansiColour green
                  ex <- liftIO (doesFileExist f)
                  if ex
                     then do ansiColour reset
-                            lines <$> liftIO (readFile f) >>= foldr
-                                                                (\l x -> uncurry runLine l >>= flip when x)
-                                                                (do ansiColour green
-                                                                    outputStrLn "script exited successfully") . zip [1..]
+                            liftIO (readFile f) >>= foldr
+                                                      (\l x -> uncurry runLine l >>= flip when x)
+                                                      (do ansiColour green
+                                                          outputStrLn "script exited successfully") . zip [1..] . lines
                     else do ansiColour red
                             outputStr "script "
                             ansiColour cyan

@@ -2,6 +2,15 @@
 
 An interpreter for the untyped [λ-calculus](https://en.wikipedia.org/wiki/Lambda_calculus), written in Haskell.
 
+```
+~> ~prelude
+attempting to run script ./lib/prelude
+script executed successfully
+~> Take 5 Primes
+[2,3,5,7,11]
+~>
+```
+
 ## λ-Term Syntax
 
 Valid λ-terms are one of the following three things:
@@ -18,6 +27,8 @@ Additionally, the interpreter maintains an environment of named λ-terms which m
 
 * Identifiers are non-empty strings of Latin letters and decimal digits which begin with an upper-case letter.
 * The environment of named λ-terms may be extended using a `~let` command: `~let Identity := λx.x`, `~let Y := λf.(λx.f (x x)) (λx.f (x x))`.
+
+See [lib/prelude](lib/prelude) for many example λ-terms.
 
 ## Interpreter Commands
 

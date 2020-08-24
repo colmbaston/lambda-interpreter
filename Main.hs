@@ -267,7 +267,7 @@ runScript f = do ansiColour green
                             liftIO (readFile f) >>= foldr
                                                       (\l x -> uncurry runLine l >>= flip when x)
                                                       (do ansiColour green
-                                                          outputStrLn "script exited successfully") . zip [1..] . lines
+                                                          outputStrLn "script executed successfully") . zip [1..] . lines
                     else do ansiColour red
                             outputStr "script "
                             ansiColour cyan

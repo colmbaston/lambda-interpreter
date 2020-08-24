@@ -3,10 +3,12 @@
 An interpreter for the untyped [λ-calculus](https://en.wikipedia.org/wiki/Lambda_calculus), written in Haskell.
 
 ```
+~> (λx.x x) (\y.y) z
+z
 ~> 2 2 2 2
 65536
 ~> ~prelude
-attempting to run script ./lib/prelude
+attempting to run script ./lib/prelude:wq
 script executed successfully
 ~> Fac 6
 720

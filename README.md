@@ -23,7 +23,7 @@ pretty-printing off
 
 ## λ-Term Syntax
 
-Valid λ-terms are one of the following three things:
+Valid λ-terms can be one of the following three things:
 
 * Variables are non-empty strings of lower-case Latin letters: `a`, `b`, `c`, `x`, `y`, `z`, `aa`, `ab`, etc.
 * λ-abstractions begin with either `λ` or `\`, then consist of a valid variable name and a subterm separated by a dot: `λx.x`, `\x.x`.

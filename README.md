@@ -5,10 +5,15 @@ An interpreter for the untyped [λ-calculus](https://en.wikipedia.org/wiki/Lambd
 ```
 ~> (λx.x x) (λy.y) z
 z
+~> ~reductions (λx.x x) (λy.y) z
+0: (λx.x x) (λy.y) z
+1: (λy.y) (λy.y) z
+2: (λy.y) z
+3: z
 ~> 2 2 2 2
 65536
 ~> ~prelude
-attempting to run script ./lib/prelude:wq
+attempting to run script ./lib/prelude
 script executed successfully
 ~> Fac 6
 720
@@ -18,7 +23,6 @@ script executed successfully
 pretty-printing off
 ~> Take 5 Primes
 λp.p (λf.λx.f (f x)) (λp.p (λf.λx.f (f (f x))) (λp.p (λf.λx.f (f (f (f (f x))))) (λp.p (λf.λx.f (f (f (f (f (f (f x))))))) (λp.p (λf.λx.f (f (f (f (f (f (f (f (f (f (f x))))))))))) (λx.λt.λf.t)))))
-~>
 ```
 
 ## λ-Term Syntax

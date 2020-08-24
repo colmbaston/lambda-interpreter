@@ -8,6 +8,10 @@ attempting to run script ./lib/prelude
 script executed successfully
 ~> Take 5 Primes
 [2,3,5,7,11]
+~> ~pprint
+pretty-printing off
+~> Take 5 Primes
+λp.p (λf.λx.f (f x)) (λp.p (λf.λx.f (f (f x))) (λp.p (λf.λx.f (f (f (f (f x))))) (λp.p (λf.λx.f (f (f (f (f (f (f x))))))) (λp.p (λf.λx.f (f (f (f (f (f (f (f (f (f (f x))))))))))) (λx.λt.λf.t)))))
 ~>
 ```
 

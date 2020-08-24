@@ -3,7 +3,7 @@
 An interpreter for the untyped [λ-calculus](https://en.wikipedia.org/wiki/Lambda_calculus), written in Haskell.
 
 ```
-~> (λx.x x) (\y.y) z
+~> (λx.x x) (λy.y) z
 z
 ~> 2 2 2 2
 65536

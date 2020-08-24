@@ -40,8 +40,7 @@
 
 ~~ Pairs
 
-~let Pair := λa.λb.λp.p a b
-
+~let Pair   := λa.λb.λp.p a b
 ~let First  := λp.p True
 ~let Second := λp.p False
 ~let Swap   := λp.Pair (Second p) (First p)

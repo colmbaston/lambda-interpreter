@@ -32,8 +32,8 @@
 ~let GEQ := λm.λn.IsZero (Sub n m)
 ~let LT  := λm.λn.Not (GEQ m n)
 ~let GT  := λm.λn.Not (LEQ m n)
-~let EQ  := λm.λn.And  (GEQ m n) (LEQ m n)
-~let NEQ := λm.λn.Not (EQ  m n)
+~let EQ  := λm.λn.And (GEQ m n) (LEQ m n)
+~let NEQ := λm.λn.Not (EQ m n)
 
 ~let Min := λn.λm.LEQ n m n m
 ~let Max := λn.λm.GEQ n m n m
@@ -68,7 +68,7 @@
 ~let Fac    := Y (λr.λn.(IsZero n) 1 (Mul n (r (Pred n))))
 ~let DivMod := Y (λr.λq.λm.λn.(LT m n) (Pair q m) (r (Succ q) (Sub m n) n)) 0
 
-~let Div := λm.λn.First  (DivMod m n)
+~let Div := λm.λn.First (DivMod m n)
 ~let Mod := λm.λn.Second (DivMod m n)
 
 ~let Take  := Y (λr.λn.λl.(IsZero n) Nil (Cons (Head l) (r (Pred n) (Tail l))))
@@ -91,8 +91,8 @@
 
 ~~ Mutual Recursion
 
-~let REven := λr.λn.(IsZero n) True  (r (Pred n))
+~let REven := λr.λn.(IsZero n) True (r (Pred n))
 ~let ROdd  := λr.λn.(IsZero n) False (r (Pred n))
 
-~let Even := Y (λx.REven (ROdd  x))
-~let Odd  := Y (λx.ROdd  (REven x))
+~let Even := Y (λx.REven (ROdd x))
+~let Odd  := Y (λx.ROdd (REven x))

@@ -1,6 +1,4 @@
-~~ |-------------------|
-~~ | Basic Combinators |
-~~ |-------------------|
+~~ Basic Combinators
 
 ~let S := λx.λy.λz.x z (y z)
 ~let K := λx.λy.x
@@ -10,9 +8,7 @@
 ~let W := λx.λy.x y y
 ~let X := λx.x S K
 
-~~ |----------|
-~~ | Booleans |
-~~ |----------|
+~~ Booleans
 
 ~let True  := λt.λf.t
 ~let False := λt.λf.f
@@ -22,46 +18,27 @@
 ~let Or  := λa.λb.a True b
 ~let Xor := λa.λb.a (Not b) b
 
-~let || := Or
-~let && := And
-
-~~ |---------------------------|
-~~ | Church Numeral Operations |
-~~ |---------------------------|
+~~ Church Numeral Operations
 
 ~let IsZero := λn.n (λx.False) True
 ~let Succ   := λn.λf.λx.f (n f x)
 ~let Pred   := λn.λf.λx.n (λg.λh.h (g f)) (λu.x) (λu.u)
-~let Plus   := λm.λn.λf.λx.m f (n f x)
-~let Minus  := λm.λn.n Pred m
-~let Mult   := λm.λn.λf.m (n f)
+~let Add    := λm.λn.λf.λx.m f (n f x)
+~let Sub    := λm.λn.n Pred m
+~let Mul    := λm.λn.λf.m (n f)
 ~let Exp    := λm.λn.(IsZero n) 1 (n m)
 
-~let + := Plus
-~let - := Minus
-~let * := Mult
-~let ^ := Exp
-
-~let LEQ := λm.λn.IsZero (- m n)
-~let GEQ := λm.λn.IsZero (- n m)
+~let LEQ := λm.λn.IsZero (Sub m n)
+~let GEQ := λm.λn.IsZero (Sub n m)
 ~let LT  := λm.λn.Not (GEQ m n)
 ~let GT  := λm.λn.Not (LEQ m n)
-~let EQ  := λm.λn.&&  (GEQ m n) (LEQ m n)
+~let EQ  := λm.λn.And  (GEQ m n) (LEQ m n)
 ~let NEQ := λm.λn.Not (EQ  m n)
 
-~let <= := LEQ
-~let >= := GEQ
-~let <  := LT
-~let >  := GT
-~let == := EQ
-~let /= := NEQ
+~let Min := λn.λm.LEQ n m n m
+~let Max := λn.λm.GEQ n m n m
 
-~let Min := λn.λm. <= n m n m
-~let Max := λn.λm. >= n m n m
-
-~~ |-------|
-~~ | Pairs |
-~~ |-------|
+~~ Pairs
 
 ~let Pair := λa.λb.λp.p a b
 
@@ -69,63 +46,50 @@
 ~let Second := λp.p False
 ~let Swap   := λp.Pair (Second p) (First p)
 
-~~ |-------|
-~~ | Lists |
-~~ |-------|
+~~ Lists
 
 ~let Nil  := λx.True
 ~let Cons := Pair
 ~let Head := First
 ~let Tail := Second
 
-~let [] := Nil
-~let :: := Cons
-
 ~let Null  := λl.l (λh.λt.False)
 ~let Drop  := λn.n Tail
 ~let Index := λl.λn.Head (Drop n l)
 
-~~ |-------------------------|
-~~ | Fixed-point Combinators |
-~~ |-------------------------|
+~~ Fixed-point Combinators
 
 ~let Y     := λf.(λx.f (x x)) (λx.f (x x))
 ~let Z     := λf.(λx.f (λy.x x y)) (λx.f (λy.x x y))
 ~let Theta := (λx.λy.y (x x y)) (λx.λy.y (x x y))
 
-~~ |---------------------------------------------------------------------------|
-~~ | Recursion (Warning: These will diverge under applicative order reduction) |
-~~ |---------------------------------------------------------------------------|
+~~ Recursion (Warning: These will diverge under applicative order reduction)
 
-~let Fact   := Y (λr.λn.(IsZero n) 1 (* n (r (Pred n))))
-~let DivMod := Y (λr.λq.λm.λn.(< m n) (Pair q m) (r (Succ q) (- m n) n)) 0
+~let Fact   := Y (λr.λn.(IsZero n) 1 (Mul n (r (Pred n))))
+~let DivMod := Y (λr.λq.λm.λn.(LT m n) (Pair q m) (r (Succ q) (Sub m n) n)) 0
 
 ~let Div := λm.λn.First  (DivMod m n)
 ~let Mod := λm.λn.Second (DivMod m n)
-~let /   := Div
-~let %   := Mod
 
-~let Take  := Y (λr.λn.λl.(IsZero n) [] (:: (Head l) (r (Pred n) (Tail l))))
+~let Take  := Y (λr.λn.λl.(IsZero n) Nil (Cons (Head l) (r (Pred n) (Tail l))))
 ~let Foldr := λf.λx.Y (λr.λl.Null l x (f (Head l) (Tail l) (r (Tail l))))
 ~let Foldl := λf.Y (λr.λa.λl.(Null l) a (r (f (Head l) (Tail l) a) (Tail l)))
 
-~let Sum     := Foldr (λh.λt.λr.+ h r) 0
+~let Sum     := Foldr (λh.λt.λr.Add h r) 0
 ~let Length  := Foldr (λh.λt.λr.Succ r) 0
-~let Append  := λa.λb.Foldr (λh.λt.λr.:: h r) b a
-~let Concat  := Foldr (λh.λt.λr.Append h r) []
-~let Map     := λf.Foldr (λh.λt.λr.Cons (f h) r) []
-~let Filter  := λp.Foldr (λh.λt.λr.(p h) (:: h r) r) []
-~let Reverse := Foldl (λh.λt.λa.:: h a) []
+~let Append  := λa.λb.Foldr (λh.λt.λr.Cons h r) b a
+~let Concat  := Foldr (λh.λt.λr.Append h r) Nil
+~let Map     := λf.Foldr (λh.λt.λr.Cons (f h) r) Nil
+~let Filter  := λp.Foldr (λh.λt.λr.(p h) (Cons h r) r) Nil
+~let Reverse := Foldl (λh.λt.λa.Cons h a) Nil
 
-~let Iterate := Y (λr.λf.λx.:: x (r f (f x)))
+~let Iterate := Y (λr.λf.λx.Cons x (r f (f x)))
 ~let From    := Iterate Succ
 
-~let FilterPrime := λr.λxs.:: (Head xs) (r (Filter (λn.Not (IsZero (% n (Head xs)))) (Tail xs)))
-~let Primes      := :: 2 (Y FilterPrime (Iterate (λx.Succ (Succ x)) 3))
+~let FilterPrime := λr.λxs.Cons (Head xs) (r (Filter (λn.Not (IsZero (Mod n (Head xs)))) (Tail xs)))
+~let Primes      := Cons 2 (Y FilterPrime (Iterate (λx.Succ (Succ x)) 3))
 
-~~ |------------------|
-~~ | Mutual Recursion |
-~~ |------------------|
+~~ Mutual Recursion
 
 ~let REven := λr.λn.(IsZero n) True  (r (Pred n))
 ~let ROdd  := λr.λn.(IsZero n) False (r (Pred n))

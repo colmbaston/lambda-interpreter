@@ -20,10 +20,10 @@ import Lambda
 type Parser = Parsec Void String
 
 data Input = Term  Term
+           | Let String Term
            | Reds  Term
            | Time  Term
            | Count Term
-           | Let String Term
            | Script FilePath
            | Eval EvalStrat
            | PPrint
@@ -109,7 +109,7 @@ termParser = trim absLevel
 
 absLevel :: Parser Term
 absLevel = appLevel <|> do char '\\' <|> char 'λ'
-                           x <- trim (some (satisfy isLower))
+                           x <- trim (some (satisfy isVarChar))
                            char '.'
                            Abs x <$> termParser
 
@@ -117,10 +117,13 @@ appLevel :: Parser Term
 appLevel = chainl1 atomLevel (App <$ space1)
 
 atomLevel :: Parser Term
-atomLevel = Var <$> some (satisfy isValid) <|> parens absLevel
+atomLevel = Var <$> some (satisfy isIdentChar) <|> parens absLevel
 
-isValid :: Char -> Bool
-isValid c = c >= '!' && c <= '}' && c `notElem` "\\λ.()"
+isIdentChar :: Char -> Bool
+isIdentChar c = isAscii c && isAlphaNum c
+
+isVarChar :: Char -> Bool
+isVarChar c = isAscii c && isLower c
 
 {-
     Parser for interpreter inputs. Commands are strings beginning with a single '~', comments
@@ -131,21 +134,19 @@ inputParser :: Parser Input
 inputParser = trim (try (char '~' >> commandParser) <|> commentParser <|> Term <$> termParser)
 
 commandParser :: Parser Input
-commandParser =  Let                  <$> (insensitive "let"        >> space1 >> ident) <*> (space1 >> string ":=" >> termParser)
-             <|> Reds                 <$> (insensitive "reductions" >> space1 >> termParser)
-             <|> Time                 <$> (insensitive "time"       >> space1 >> termParser)
-             <|> Count                <$> (insensitive "count"      >> space1 >> termParser)
-             <|> Eval                 <$> (insensitive "eval"       >> space1 >> stratParser)
-             <|> PPrint               <$   insensitive "pprint"
-             <|> Script               <$> (insensitive "script"     >> space1 >> reverse . dropWhile isSpace . reverse <$> some nextChar)
-             <|> Script "lib/prelude" <$   insensitive "prelude"
-             <|> Help                 <$   insensitive "help"
-             <|> Exit                 <$   insensitive "exit"
+commandParser =  Let                    <$> (insensitive "let"        >> space1 >> ident) <*> (space1 >> string ":=" >> termParser)
+             <|> Reds                   <$> (insensitive "reductions" >> space1 >> termParser)
+             <|> Time                   <$> (insensitive "time"       >> space1 >> termParser)
+             <|> Count                  <$> (insensitive "count"      >> space1 >> termParser)
+             <|> Script                 <$> (insensitive "script"     >> space1 >> reverse . dropWhile isSpace . reverse <$> some nextChar)
+             <|> Script "./lib/prelude" <$   insensitive "prelude"
+             <|> Eval                   <$> (insensitive "eval"       >> space1 >> stratParser)
+             <|> PPrint                 <$   insensitive "pprint"
+             <|> Help                   <$   insensitive "help"
+             <|> Exit                   <$   insensitive "exit"
 
 ident :: Parser String
-ident = do (x:xs) <- some (satisfy isValid)
-           guard (not (isLower x || isDigit x))
-           pure (x:xs)
+ident = (:) <$> satisfy (\c -> isAscii c && isUpper c) <*> many (satisfy isIdentChar)
 
 commentParser :: Parser Input
 commentParser =  Comment <$ (string "~~" >> many nextChar)

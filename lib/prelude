@@ -74,13 +74,13 @@
 ~let Foldr := λf.λx.Y (λr.λl.Null l x (f (Head l) (r (Tail l))))
 ~let Foldl := λf.Y (λr.λa.λl.(Null l) a (r (f (Head l) a) (Tail l)))
 
-~let Sum     := Foldr (λh.λr.Add h r) 0
-~let Length  := Foldr (λh.λr.Succ r) 0
-~let Append  := λa.λb.Foldr (λh.λr.Cons h r) b a
-~let Concat  := Foldr (λh.λr.Append h r) Nil
-~let Map     := λf.Foldr (λh.λr.Cons (f h) r) Nil
-~let Filter  := λp.Foldr (λh.λr.(p h) (Cons h r) r) Nil
-~let Reverse := Foldl (λh.λa.Cons h a) Nil
+~let Sum     := Foldr Add 0
+~let Length  := Foldr (True Succ) 0
+~let Append  := λa.λb.Foldr Cons b a
+~let Concat  := Foldr Append Nil
+~let Map     := λf.Foldr (λh.Cons (f h)) Nil
+~let Filter  := λp.Foldr (λh.λr.p h (Cons h r) r) Nil
+~let Reverse := Foldl Cons Nil
 
 ~let Iterate := Y (λr.λf.λx.Cons x (r f (f x)))
 ~let From    := Iterate Succ

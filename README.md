@@ -33,7 +33,7 @@ The standard associativity and precedence rules are observed, that is, applicati
 Parentheses may be used to delimit λ-terms.
 
 Non-empty strings of decimal digits will be parsed according to the [Church encoding](https://en.wikipedia.org/wiki/Church_encoding) for that natural number; for example, `3` is syntactic sugar for `λf.λx.f (f (f x))`.
-Additionally, the interpreter maintains an environment of named λ-terms which may be referred to by an identifier:
+Additionally, the interpreter maintains an environment of named λ-terms which may be referenced by an identifier:
 
 * Identifiers are non-empty strings of Latin letters and decimal digits which begin with an upper-case letter.
 * The environment of named λ-terms may be extended using a `~let` command: `~let Identity := λx.x`, `~let Y := λf.(λx.f (x x)) (λx.f (x x))`.
@@ -45,7 +45,7 @@ See [lib/prelude](lib/prelude) for many example λ-terms.
 Bare inputs, that is those not beginning with a tilde, will be interpreted as a λ-term, evaluated according to the current evaluation strategy, and printed according to the current printing strategy.
 Otherwise, they will have the following effect:
 
-* `~let I := T`: Add λ-term `T` to the environment where it may then be referred to using identifier `I`.
+* `~let I := T`: Add λ-term `T` to the environment where it may then be referenced using identifier `I`.
 * `~reductions T`: Evaluate λ-term `T`, printing intermediate reductions on the way to the normal form.
 * `~time T`: Evaluate λ-term `T`, timing the evaluation.
 * `~count T`: Evaluate λ-term `T`, counting how many reductions normalisation takes.

@@ -65,7 +65,7 @@
 
 ~~ Recursion (Warning: These will diverge under applicative order reduction)
 
-~let Fact   := Y (λr.λn.(IsZero n) 1 (Mul n (r (Pred n))))
+~let Fac    := Y (λr.λn.(IsZero n) 1 (Mul n (r (Pred n))))
 ~let DivMod := Y (λr.λq.λm.λn.(LT m n) (Pair q m) (r (Succ q) (Sub m n) n)) 0
 
 ~let Div := λm.λn.First  (DivMod m n)

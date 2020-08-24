@@ -8,6 +8,8 @@ An interpreter for the untyped [λ-calculus](https://en.wikipedia.org/wiki/Lambd
 ~> ~prelude
 attempting to run script ./lib/prelude
 script executed successfully
+~> Fac 6
+720
 ~> Take 5 Primes
 [2,3,5,7,11]
 ~> ~pprint

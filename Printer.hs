@@ -61,11 +61,11 @@ toPair (Abs x (App (App (Var y) u) v)) | x == y && x `notElem` freeVars u && x `
 toPair _                                                                                            = Nothing
 
 showPair :: Term -> Maybe ShowS
-showPair = fmap (\(x,y) -> showChar '<'
+showPair = fmap (\(x,y) -> showChar '⟨'
                          . pShowTerm False x
                          . showChar ','
                          . pShowTerm False y
-                         . showChar '>') . toPair
+                         . showChar '⟩') . toPair
 
 toList :: Term -> Maybe [Term]
 toList (Abs f (Abs x t)) | f /= x = go t

@@ -2,35 +2,12 @@
 
 An interpreter for the untyped [λ-calculus](https://en.wikipedia.org/wiki/Lambda_calculus), written in Haskell.
 
-```
-~> (λx.x x) (λy.y) z
-z
-~> ~reductions (λx.x x) (λy.y) z
-0: (λx.x x) (λy.y) z
-1: (λy.y) (λy.y) z
-2: (λy.y) z
-3: z
-~> 2 2 2 2
-65536
-~> ~prelude
-attempting to run script ./lib/prelude
-script executed successfully
-~> Fac 6
-720
-~> Take 5 Primes
-[2,3,5,7,11]
-~> ~pprint
-pretty-printing off
-~> Take 5 Primes
-λp.p (λf.λx.f (f x)) (λp.p (λf.λx.f (f (f x))) (λp.p (λf.λx.f (f (f (f (f x))))) (λp.p (λf.λx.f (f (f (f (f (f (f x))))))) (λp.p (λf.λx.f (f (f (f (f (f (f (f (f (f (f x))))))))))) (λx.λt.λf.t)))))
-```
-
 ## λ-Term Syntax
 
 Valid λ-terms can be one of the following three things:
 
 * Variables are non-empty strings of lower-case Latin letters: `a`, `b`, `c`, `x`, `y`, `z`, `aa`, `ab`, etc.
-* λ-abstractions begin with either `λ` or `\`, then consist of a valid variable name and a subterm separated by a dot: `λx.x`, `\x.x`.
+* λ-abstractions begin with either `λ` or `\`, then consist of a valid variable name and a subterm separated by a dot: `λx.x`, `\y.y`.
 * Applications consist of two subterms separated by a mandatory space: `(λx.x x) (λy.y)`.
 
 The standard associativity and precedence rules are observed, that is, applications associate to the left and have a higher precedence than λ-abstractions.
@@ -42,12 +19,21 @@ Additionally, the interpreter maintains an environment of named λ-terms which m
 * Identifiers are non-empty strings of Latin letters and decimal digits which begin with an upper-case letter.
 * The environment of named λ-terms may be extended using a `~let` command: `~let Identity := λx.x`, `~let Y := λf.(λx.f (x x)) (λx.f (x x))`.
 
+As λ-terms may be difficult to read, the interpreter can pretty-print some common structures:
+
+* If the λ-term is a numeral, it will be displayed in decimal notation.
+* If the λ-term is a pair, the components of the pair will be recursively pretty-printed, and the resulting strings formatted between angle brackets `⟨X,Y⟩`.
+* If the λ-term is a list, the elements of the list will be recursively pretty-printed, and the resulting strings formatted between square brackets `[X,Y,Z]`.
+
+For example, the λ-term `λp.p (λf.λx.f (f (f x))) (λf.λx.f a (f b (f c x)))` will be pretty-printed `⟨3,[a,b,c]⟩`.
+Since the empty list and the numeral `0` share the representation `λf.λx.x`, with no type information to distinguish them, they will both be displayed as `0`.
+
 See the [prelude](lib/prelude) for many example λ-terms.
 
 ## Interpreter Commands
 
 Bare inputs, that is those not beginning with a tilde, will be interpreted as a λ-term, evaluated according to the current evaluation strategy, and printed according to the current printing strategy.
-Otherwise, they will have the following effect:
+Otherwise, inputs have the following effect:
 
 * `~let I := T`: Add λ-term `T` to the environment where it may then be referenced using identifier `I`.
 * `~reductions T`: Evaluate λ-term `T`, printing intermediate reductions on the way to the normal form.

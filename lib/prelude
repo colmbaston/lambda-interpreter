@@ -47,12 +47,12 @@
 
 ~~ Lists
 
-~let Nil  := λx.True
-~let Cons := Pair
-~let Head := First
-~let Tail := Second
+~let Nil  := λf.λx.x
+~let Null := λl.l (λh.λt.False) True
+~let Cons := λh.λt.λf.λx.f h (t f x)
+~let Head := λl.l (λh.λt.h) False
+~let Tail := λl.λf.λx.l (λh.λt.λg.g h (t f)) (λt.x) (λh.λt.t)
 
-~let Null  := λl.l (λh.λt.False)
 ~let Drop  := λn.n Tail
 ~let Index := λl.λn.Head (Drop n l)
 
@@ -71,7 +71,7 @@
 ~let Mod := λm.λn.Second (DivMod m n)
 
 ~let Take  := Y (λr.λn.λl.(IsZero n) Nil (Cons (Head l) (r (Pred n) (Tail l))))
-~let Foldr := λf.λx.Y (λr.λl.Null l x (f (Head l) (r (Tail l))))
+~let Foldr := λf.λx.λl.l f x
 ~let Foldl := λf.Y (λr.λa.λl.(Null l) a (r (f (Head l) a) (Tail l)))
 
 ~let Sum     := Foldr Add 0

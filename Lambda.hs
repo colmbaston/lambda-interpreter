@@ -45,6 +45,9 @@ allVars (Var v)   = S.singleton v
 allVars (Abs v t) = S.insert v (allVars t)
 allVars (App x y) = allVars x `S.union` allVars y
 
+closed :: Term -> Bool
+closed = S.null . freeVars
+
 {-
     Two λ-terms are α-equivalent if the bound variables
     of one can be renamed to obtain the other.
@@ -68,8 +71,6 @@ instance Show Term where
     showsPrec p (Abs x y) = showParen (p > 1) (showString ('λ' : x) . showChar '.' . showsPrec 1 y)
     showsPrec p (App x y) = showParen (p > 2) (showsPrec 2 x        . showChar ' ' . showsPrec 3 y)
 
-
-
 {-
     Abstracts a common pattern when working with λ-terms, allowing functions
     to pass their recursive calls to 'decend' in catch-all patterns.
@@ -91,7 +92,6 @@ descendA f (App x y) = App <$> f x <*> f y
     version of the capture-avoiding substitution function where we know name
     capture can't occur.
 -}
-
 
 beta :: Name -> Term -> Term -> Term
 beta x z = substitute (freeVars z) x z

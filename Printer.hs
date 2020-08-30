@@ -1,3 +1,5 @@
+{-# LANGUAGE BangPatterns #-}
+
 module Printer
 (
     show,
@@ -28,11 +30,11 @@ pShowTerm b t = fromMaybe (showParen b (go t)) (showInt t <|> showList t <|> sho
     go :: Term -> ShowS
     go (Var x)   = showString x
     go (Abs x y) = showString ('λ' : x)  . showChar '.' . pShowTerm False y
-    go (App x y) = pShowTerm (isAbs x) x . showChar ' ' . pShowTerm (not (isVar y)) y
+    go (App x y) = pShowTerm (isAbs x) x . showChar ' ' . pShowTerm (notVar y) y
 
-isVar :: Term -> Bool
-isVar (Var _) = True
-isVar _       = False
+notVar :: Term -> Bool
+notVar (Var _) = False
+notVar _       = True
 
 isAbs :: Term -> Bool
 isAbs (Abs _ _) = True
@@ -46,17 +48,17 @@ isAbs _         = False
 toInt :: Term -> Maybe Int
 toInt (Abs f (Abs x t)) | f /= x = go 0 t
   where
-    go n (Var a)         | x == a = pure n
-    go n (App (Var a) b) | f == a = go (n+1) b
-    go _ _                        = Nothing
+    go  n (Var a)         | x == a = Just n
+    go !n (App (Var a) b) | f == a = go (n+1) b
+    go _ _                         = Nothing
 toInt _ = Nothing
 
 showInt :: Term -> Maybe ShowS
 showInt = fmap N.showInt . toInt
 
 toPair :: Term -> Maybe (Term, Term)
-toPair (Abs x (App (App (Var y) u) v)) | x == y && x `notElem` freeVars u `S.union` freeVars v = pure (u,v)
-toPair _                                                                                       = Nothing
+toPair (Abs x (App (App (Var y) u) v)) | x == y && x `notElem` freeVars u && x `notElem` freeVars v = Just (u,v)
+toPair _                                                                                            = Nothing
 
 showPair :: Term -> Maybe ShowS
 showPair = fmap (\(x,y) -> showChar '<'
@@ -66,8 +68,12 @@ showPair = fmap (\(x,y) -> showChar '<'
                          . showChar '>') . toPair
 
 toList :: Term -> Maybe [Term]
-toList (Abs _ (Abs x (Abs y (Var z)))) | x == z && y /= z = pure []
-toList t                                                  = do (x,y) <- toPair t
-                                                               (x:) <$> toList y
+toList (Abs f (Abs x t)) | f /= x = go t
+  where
+    go (Var a)                 | x == a                                                     = Just []
+    go (App (App (Var a) t) b) | f == a && f `notElem` freeVars t && x `notElem` freeVars t = (t:) <$> go b
+    go _                                                                                    = Nothing
+toList _ = Nothing
+
 showList :: Term -> Maybe ShowS
 showList = fmap (showListWith (pShowTerm False)) . toList

@@ -1,7 +1,8 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Lambda
 (
     Term(..),
-    Name,
     freeVars,
     descend,
     descendA,
@@ -14,6 +15,9 @@ module Lambda
 )
 where
 
+import           Data.Ord
+import           Data.Text (Text)
+import qualified Data.Text as T
 import           Data.Maybe
 import           Data.Set (Set)
 import qualified Data.Set as S
@@ -22,7 +26,8 @@ import qualified Data.Map as M
 import qualified Data.IntMap as IM
 import           Data.IntMap (IntMap)
 import           Data.Foldable
-import Data.Function
+import           Data.Function
+
 import Control.Monad.State.Strict
 
 {-
@@ -30,17 +35,16 @@ import Control.Monad.State.Strict
     reducing, normalising, or otherwise working with λ-terms.
 -}
 
-type Name = String
-data Term = Var Name
-          | Abs Name Term
+data Term = Var Text
+          | Abs Text Term
           | App Term Term
 
-freeVars :: Term -> Set Name
+freeVars :: Term -> Set Text
 freeVars (Var v)   = S.singleton v
 freeVars (Abs v t) = S.delete v (freeVars t)
 freeVars (App x y) = freeVars x `S.union` freeVars y
 
-allVars :: Term -> Set Name
+allVars :: Term -> Set Text
 allVars (Var v)   = S.singleton v
 allVars (Abs v t) = S.insert v (allVars t)
 allVars (App x y) = allVars x `S.union` allVars y
@@ -57,7 +61,7 @@ instance Eq Term where
     (==) = eqTerm 0 M.empty M.empty
 
 
-eqTerm :: Int -> Map Name Int -> Map Name Int -> Term -> Term -> Bool
+eqTerm :: Int -> Map Text Int -> Map Text Int -> Term -> Term -> Bool
 eqTerm _ m1 m2 (Var x) (Var y) = let v1 = M.lookup x m1
                                  in case M.lookup y m2 of
                                       Just  n -> v1 == Just n
@@ -67,9 +71,9 @@ eqTerm n m1 m2 (App x y) (App a b) = eqTerm n m1 m2 x a && eqTerm n m1 m2 y b
 eqTerm _ _ _ _ _ = False
 
 instance Show Term where
-    showsPrec _ (Var x)   = showString x
-    showsPrec p (Abs x y) = showParen (p > 1) (showString ('λ' : x) . showChar '.' . showsPrec 1 y)
-    showsPrec p (App x y) = showParen (p > 2) (showsPrec 2 x        . showChar ' ' . showsPrec 3 y)
+    showsPrec _ (Var x)   = showString (T.unpack x)
+    showsPrec p (Abs x y) = showParen (p > 1) (showString ('λ' : T.unpack x) . showChar '.' . showsPrec 1 y)
+    showsPrec p (App x y) = showParen (p > 2) (showsPrec 2 x                 . showChar ' ' . showsPrec 3 y)
 
 {-
     Abstracts a common pattern when working with λ-terms, allowing functions
@@ -93,39 +97,29 @@ descendA f (App x y) = App <$> f x <*> f y
     capture can't occur.
 -}
 
-beta :: Name -> Term -> Term -> Term
+beta :: Text -> Term -> Term -> Term
 beta x z = substitute (freeVars z) x z
 
-substitute :: Set Name -> Name -> Term -> Term -> Term
+substitute :: Set Text -> Text -> Term -> Term -> Term
 substitute fv a t (Var x)   = if x == a then t else Var x
 substitute fv a t (App x y) = App (substitute fv a t x) (substitute fv a t y)
 substitute fv a t (Abs x y) | a == x           = Abs x y
                             | S.notMember x fv = Abs x  (substitute fv a t y)
                             | otherwise        = Abs fn (substitute fv a t (rename x (Var fn) y))
                             where
-                              fn = nextName (maximumBy compareNames (S.insert x (fv `S.union` allVars y)))
+                              fn = nextName (maximumBy (comparing T.length <> compare) (S.insert x (fv `S.union` allVars y)))
 
-rename :: Name -> Term -> Term -> Term
+rename :: Text -> Term -> Term -> Term
 rename a b (Var x)   = if x == a then b   else Var x
 rename a b (Abs x y) = if x == a then Abs x y else Abs x (rename a b y)
 rename a b t         = descend (rename a b) t
 
 
-nextName :: Name -> Name
-nextName = reverse . bump . reverse
-  where
-    bump ""       = "a"
-    bump ('z':xs) = 'a' : nextName xs
-    bump ( x :xs) = succ x : xs
-
-compareNames :: Name -> Name -> Ordering
-compareNames = compareLength <> compare
-  where
-    compareLength :: [a] -> [a] -> Ordering
-    compareLength []     []     = EQ
-    compareLength []     (_:_)  = LT
-    compareLength (_:_)  []     = GT
-    compareLength (_:xs) (_:ys) = compareLength xs ys
+nextName :: Text -> Text
+nextName n = case T.unsnoc n of
+               Nothing        -> "a"
+               Just (xs, 'z') -> nextName xs `T.snoc` 'a'
+               Just (xs,  x ) ->          xs `T.snoc` succ x
 
 {-
     Functions for performing single reduction steps, for the normal order

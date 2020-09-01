@@ -1,10 +1,13 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Main where
 
 import           Numeric
 import           Data.Char
+import qualified Data.Text as T
+import           Data.Text (Text)
 import           Data.List
 import qualified Data.Map as M
 import           Data.Map (Map)
@@ -35,7 +38,7 @@ import Printer
     current evaluation strategy, and the current printing strategy.
 -}
 
-data InterpreterState = I { env :: Map String Term, strat :: EvalStrat, pprint :: Bool }
+data InterpreterState = I { env :: Map Text Term, strat :: EvalStrat, pprint :: Bool }
 type Interpreter      = InputT (StateT InterpreterState IO)
 
 {-
@@ -89,17 +92,17 @@ settings :: Settings (StateT InterpreterState IO)
 settings = Settings (completeWord Nothing " ()\\." completions) (Just ".history") False
   where
     completions :: String -> StateT InterpreterState IO [Completion]
-    completions xs@('~':_) = pure (makeComp (prefixes xs ["~count",
-                                                          "~eval",
-                                                          "~exit",
-                                                          "~help",
-                                                          "~let",
-                                                          "~pprint",
-                                                          "~prelude",
-                                                          "~reductions",
-                                                          "~script",
-                                                          "~time"]))
-    completions xs         = do ks <- prefixes xs . M.keys . env <$> get
+    completions xs@('~':_) = pure (makeComp (prefixes (T.pack xs) ["~count",
+                                                                   "~eval",
+                                                                   "~exit",
+                                                                   "~help",
+                                                                   "~let",
+                                                                   "~pprint",
+                                                                   "~prelude",
+                                                                   "~reductions",
+                                                                   "~script",
+                                                                   "~time"]))
+    completions xs         = do ks <- prefixes (T.pack xs) . M.keys . env <$> get
                                 let l = length ks
                                 if l >= 50
                                   then do ansiColour red
@@ -111,11 +114,11 @@ settings = Settings (completeWord Nothing " ()\\." completions) (Just ".history"
                                             else liftIO (putStr ('\n' :prompt)) >> pure []
                                   else do pure (makeComp ks)
 
-    prefixes :: String -> [String] -> [String]
-    prefixes xs = filter ((map toLower xs `isPrefixOf`) . map toLower)
+    prefixes :: Text -> [Text] -> [Text]
+    prefixes xs = filter ((T.map toLower xs `T.isPrefixOf`) . T.map toLower)
 
-    makeComp :: [String] -> [Completion]
-    makeComp = map (\x -> Completion x ("\ESC[1;32m" ++ x ++ "\ESC[m") True)
+    makeComp :: [Text] -> [Completion]
+    makeComp = map (\x -> let y = T.unpack x in Completion y ("\ESC[1;32m" ++ y ++ "\ESC[m") True)
 
 interruptible :: (MonadIO m, MonadMask m) => InputT m a -> InputT m ()
 interruptible x = handle (\Interrupt -> outputStrLn "\ESC[1;31minterrupted" >> ansiColour reset) (withInterrupt (void x))
@@ -129,29 +132,11 @@ main :: IO ()
 main = do hSetBuffering stdout NoBuffering
           hSetBuffering stdin  NoBuffering
           ansiColour cyan
-          putStrLn ('\n' : ascii ++ "\n")
+          putStrLn "Fundamentalist Functional Programming"
           ansiColour green
-          putStrLn "                   An Interpreter for the Untyped λ-Calculus"
-          putStrLn "                     Enter \"~help\" for more information...\n"
+          putStrLn "An Interpreter for Alonzo Church's Untyped λ-Calculus"
+          putStrLn "Enter \"~help\" for more information."
           evalStateT (runInputT settings (forever interpret)) (I M.empty Norm True)
-
-ascii :: String
-ascii = "     ______                __                           __        ___      __  \n\
-        \    / ____/_  ______  ____/ /___ _____ ___  ___  ____  / /_____ _/ (_)____/ /_ \n\
-        \   / /_  / / / / __ \\/ __  / __ `/ __ `__ \\/ _ \\/ __ \\/ __/ __ `/ / / ___/ __/ \n\
-        \  / __/ / /_/ / / / / /_/ / /_/ / / / / / /  __/ / / / /_/ /_/ / / (__  ) /_   \n\
-        \ /_/    \\__,_/_/ /_/\\__,_/\\__,_/_/ /_/ /_/\\___/_/ /_/\\__/\\__,_/_/_/____/\\__/   \n\
-        \                 ______                 __  _                   __             \n\
-        \                / ____/_  ______  _____/ /_(_)___  ____  ____ _/ /             \n\
-        \               / /_  / / / / __ \\/ ___/ __/ / __ \\/ __ \\/ __ `/ /              \n\
-        \              / __/ / /_/ / / / / /__/ /_/ / /_/ / / / / /_/ / /               \n\
-        \             /_/    \\__,_/_/ /_/\\___/\\__/_/\\____/_/ /_/\\__,_/_/                \n\
-        \        ____                                                  _                \n\
-        \       / __ \\_________  ____ __________ _____ ___  ____ ___  (_)___  ____ _    \n\
-        \      / /_/ / ___/ __ \\/ __ `/ ___/ __ `/ __ `__ \\/ __ `__ \\/ / __ \\/ __ `/    \n\
-        \     / ____/ /  / /_/ / /_/ / /  / /_/ / / / / / / / / / / / / / / / /_/ /     \n\
-        \    /_/   /_/   \\____/\\__, /_/   \\__,_/_/ /_/ /_/_/ /_/ /_/_/_/ /_/\\__, /      \n\
-        \                     /____/                                       /____/       \n"
 
 {-
    Read a single line from stdin, attempt to parse it in the current
@@ -325,11 +310,9 @@ runHelp = do ansiColour green
                                ,""
                                ,"    A variable v may be any non-empty string of lower-case letters. λ-terms"
                                ,"    placed into the environment by ~let may be referenced by name, and a name n"
-                               ,"    may be any non-empty string of characters from ASCII range 33-125 (except "
-                               ,"    '(', ')', '\\', and '.') which does not begin with a lower-case letter or a"
-                               ,"    numeric character. Identifiers containing only numeric characters are"
-                               ,"    treated as natural numbers and desugared into the corresponding Church"
-                               ,"    numeral representation."
+                               ,"    may be any non-empty string of letters starting with an upper-case letter."
+                               ,"    Identifiers containing only numeric characters are treated as natural numbers"
+                               ,"    and desugared into the corresponding Church numeral representation."
                                ,""
                                ,"  Evaluation strategies:"
                                ,"    norm -> normal order evaluation (the default)"

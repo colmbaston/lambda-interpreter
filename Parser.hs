@@ -1,9 +1,13 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Parser where
 
 import           Data.Void
 import           Data.Char
 import qualified Data.Map as M
 import           Data.Map (Map)
+import qualified Data.Text as T
+import           Data.Text (Text)
 import           Control.Monad
 import           Text.Megaparsec
 import           Text.Megaparsec.Char
@@ -19,11 +23,11 @@ import Lambda
 
 type Parser = Parsec Void String
 
-data Input = Term  Term
-           | Let String Term
-           | Reds  Term
-           | Time  Term
-           | Count Term
+data Input = Term     Term
+           | Let Text Term
+           | Reds     Term
+           | Time     Term
+           | Count    Term
            | Script FilePath
            | Eval EvalStrat
            | PPrint
@@ -44,7 +48,7 @@ instance Show EvalStrat where
 nextChar :: Parser Char
 nextChar = satisfy (const True)
 
-parseInput :: Map String Term -> String -> Maybe Input
+parseInput :: Map Text Term -> String -> Maybe Input
 parseInput env str = case parseMaybe inputParser str of
                        Nothing        -> Nothing
                        Just (Term  t) -> Term  <$> dereference env t
@@ -109,7 +113,7 @@ termParser = trim absLevel
 
 absLevel :: Parser Term
 absLevel = appLevel <|> do char '\\' <|> char 'λ'
-                           x <- trim (some (satisfy isVarChar))
+                           x <- T.pack <$> trim (some (satisfy isVarChar))
                            char '.'
                            Abs x <$> termParser
 
@@ -117,7 +121,7 @@ appLevel :: Parser Term
 appLevel = chainl1 atomLevel (App <$ space1)
 
 atomLevel :: Parser Term
-atomLevel = Var <$> some (satisfy isIdentChar) <|> parens absLevel
+atomLevel = Var . T.pack <$> some (satisfy isIdentChar) <|> parens absLevel
 
 isIdentChar :: Char -> Bool
 isIdentChar c = isAscii c && isAlphaNum c
@@ -134,7 +138,7 @@ inputParser :: Parser Input
 inputParser = trim (try (char '~' >> commandParser) <|> commentParser <|> Term <$> termParser)
 
 commandParser :: Parser Input
-commandParser =  Let                    <$> (insensitive "let"        >> space1 >> ident) <*> (space1 >> string ":=" >> termParser)
+commandParser =  Let                    <$> (insensitive "let"        >> space1 >> T.pack <$> ident) <*> (space1 >> string ":=" >> termParser)
              <|> Reds                   <$> (insensitive "reductions" >> space1 >> termParser)
              <|> Time                   <$> (insensitive "time"       >> space1 >> termParser)
              <|> Count                  <$> (insensitive "count"      >> space1 >> termParser)
@@ -162,9 +166,9 @@ stratParser =  Norm <$ insensitive "norm"
     them with respect to a interpreter environment to obtain the actual λ-terms they represent.
 -}
 
-dereference :: Map String Term -> Term -> Maybe Term
-dereference env (Var x) | all isLower x = pure (Var x)
-                        | all isDigit x = pure (toNumeral (read x))
+dereference :: Map Text Term -> Term -> Maybe Term
+dereference env (Var x) | T.all isLower x = pure (Var x)
+                        | T.all isDigit x = pure (toNumeral (read (T.unpack x)))
                         | otherwise     = M.lookup x env
 dereference env t                       = descendA (dereference env) t
 

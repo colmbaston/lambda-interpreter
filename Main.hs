@@ -1,13 +1,10 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE OverloadedStrings #-}
 
 module Main where
 
 import           Numeric
 import           Data.Char
-import qualified Data.Text as T
-import           Data.Text (Text)
 import           Data.List
 import qualified Data.Map as M
 import           Data.Map (Map)
@@ -38,7 +35,7 @@ import Printer
     current evaluation strategy, and the current printing strategy.
 -}
 
-data InterpreterState = I { env :: Map Text Term, strat :: EvalStrat, pprint :: Bool }
+data InterpreterState = I { env :: Map String Term, strat :: EvalStrat, pprint :: Bool }
 type Interpreter      = InputT (StateT InterpreterState IO)
 
 {-
@@ -92,17 +89,17 @@ settings :: Settings (StateT InterpreterState IO)
 settings = Settings (completeWord Nothing " ()\\." completions) (Just ".history") False
   where
     completions :: String -> StateT InterpreterState IO [Completion]
-    completions xs@('~':_) = pure (makeComp (prefixes (T.pack xs) ["~count",
-                                                                   "~eval",
-                                                                   "~exit",
-                                                                   "~help",
-                                                                   "~let",
-                                                                   "~pprint",
-                                                                   "~prelude",
-                                                                   "~reductions",
-                                                                   "~script",
-                                                                   "~time"]))
-    completions xs         = do ks <- prefixes (T.pack xs) . M.keys . env <$> get
+    completions xs@('~':_) = pure (makeComp (prefixes xs ["~count",
+                                                          "~eval",
+                                                          "~exit",
+                                                          "~help",
+                                                          "~let",
+                                                          "~pprint",
+                                                          "~prelude",
+                                                          "~reductions",
+                                                          "~script",
+                                                          "~time"]))
+    completions xs         = do ks <- prefixes xs . M.keys . env <$> get
                                 let l = length ks
                                 if l >= 50
                                   then do ansiColour red
@@ -114,11 +111,11 @@ settings = Settings (completeWord Nothing " ()\\." completions) (Just ".history"
                                             else liftIO (putStr ('\n' :prompt)) >> pure []
                                   else do pure (makeComp ks)
 
-    prefixes :: Text -> [Text] -> [Text]
-    prefixes xs = filter ((T.map toLower xs `T.isPrefixOf`) . T.map toLower)
+    prefixes :: String -> [String] -> [String]
+    prefixes xs = filter ((map toLower xs `isPrefixOf`) . map toLower)
 
-    makeComp :: [Text] -> [Completion]
-    makeComp = map (\x -> let y = T.unpack x in Completion y ("\ESC[1;32m" ++ y ++ "\ESC[m") True)
+    makeComp :: [String] -> [Completion]
+    makeComp = map (\x -> Completion x ("\ESC[1;32m" ++ x ++ "\ESC[m") True)
 
 interruptible :: (MonadIO m, MonadMask m) => InputT m a -> InputT m ()
 interruptible x = handle (\Interrupt -> outputStrLn "\ESC[1;31minterrupted" >> ansiColour reset) (withInterrupt (void x))

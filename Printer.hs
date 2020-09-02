@@ -7,13 +7,12 @@ module Printer
 )
 where
 
-import qualified Data.Text as T
-import           Data.Maybe
-import           Control.Applicative
 import           Prelude   hiding (showList)
 import           Text.Show hiding (showList)
-import qualified Numeric  as N
+import           Data.Maybe
 import qualified Data.Set as S
+import qualified Numeric  as N
+import           Control.Applicative
 
 import Lambda
 
@@ -29,9 +28,9 @@ pShowTerm :: Bool -> Term -> ShowS
 pShowTerm b t = fromMaybe (showParen b (go t)) (showInt t <|> showList t <|> showPair t)
   where
     go :: Term -> ShowS
-    go (Var x)   = showString (T.unpack x)
-    go (Abs x y) = showString ('λ' : T.unpack x)  . showChar '.' . pShowTerm False y
-    go (App x y) = pShowTerm (isAbs x) x          . showChar ' ' . pShowTerm (notVar y) y
+    go (Var x)   = showString x
+    go (Abs x y) = showString ('λ' : x)  . showChar '.' . pShowTerm False y
+    go (App x y) = pShowTerm (isAbs x) x . showChar ' ' . pShowTerm (notVar y) y
 
 notVar :: Term -> Bool
 notVar (Var _) = False

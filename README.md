@@ -3,6 +3,12 @@
 An interpreter for the untyped [λ-calculus](https://en.wikipedia.org/wiki/Lambda_calculus), written in Haskell.
 
 ```
+~> Mul 2 (Fac 6)
+1440
+~> Take 8 (From 1)
+[1,2,3,4,5,6,7,8]
+~> Map (Exp 2) (Take 8 (From 1))
+[2,4,8,16,32,64,128,256]
 ~> Reverse (Take 5 (Filter Odd Primes))
 [13,11,7,5,3]
 ```

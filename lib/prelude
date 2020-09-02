@@ -56,6 +56,16 @@
 ~let Drop  := λn.n Tail
 ~let Index := λl.λn.Head (Drop n l)
 
+~let Foldr   := λf.λx.λl.l f x
+~let Sum     := λl.l Add 0
+~let Length  := λl.l (True Succ) 0
+~let Append  := λl.l Cons
+~let Concat  := λl.l Append Nil
+~let Map     := λf.λl.l (λh.Cons (f h)) Nil
+~let Filter  := λp.λl.l (λh.(p h) (Cons h) I) Nil
+~let Any     := λp.λl.l (λh.Or  (p h)) False
+~let All     := λp.λl.l (λh.And (p h)) True
+
 ~~ Fixed-point Combinators
 
 ~let Y     := λf.(λx.f (x x)) (λx.f (x x))
@@ -66,20 +76,16 @@
 
 ~let Fac    := Y (λr.λn.(IsZero n) 1 (Mul n (r (Pred n))))
 ~let DivMod := Y (λr.λq.λm.λn.(LT m n) (Pair q m) (r (Succ q) (Sub m n) n)) 0
+~let Div    := λm.λn.First  (DivMod m n)
+~let Mod    := λm.λn.Second (DivMod m n)
 
-~let Div := λm.λn.First (DivMod m n)
-~let Mod := λm.λn.Second (DivMod m n)
+~let REven := λr.λn.(IsZero n) True (r (Pred n))
+~let ROdd  := λr.λn.(IsZero n) False (r (Pred n))
+~let Even  := Y (λx.REven (ROdd  x))
+~let Odd   := Y (λx.ROdd  (REven x))
 
-~let Take  := Y (λr.λn.λl.(IsZero n) Nil (Cons (Head l) (r (Pred n) (Tail l))))
-~let Foldr := λf.λx.λl.l f x
-~let Foldl := λf.Y (λr.λa.λl.(Null l) a (r (f (Head l) a) (Tail l)))
-
-~let Sum     := Foldr Add 0
-~let Length  := Foldr (True Succ) 0
-~let Append  := λa.λb.Foldr Cons b a
-~let Concat  := Foldr Append Nil
-~let Map     := λf.Foldr (λh.Cons (f h)) Nil
-~let Filter  := λp.Foldr (λh.λr.p h (Cons h r) r) Nil
+~let Take    := Y (λr.λn.λl.(IsZero n) Nil (Cons (Head l) (r (Pred n) (Tail l))))
+~let Foldl   := λf.Y (λr.λa.λl.(Null l) a (r (f (Head l) a) (Tail l)))
 ~let Reverse := Foldl Cons Nil
 
 ~let Iterate := Y (λr.λf.λx.Cons x (r f (f x)))
@@ -87,11 +93,3 @@
 
 ~let FilterPrime := λr.λxs.Cons (Head xs) (r (Filter (λn.Not (IsZero (Mod n (Head xs)))) (Tail xs)))
 ~let Primes      := Cons 2 (Y FilterPrime (Iterate (λx.Succ (Succ x)) 3))
-
-~~ Mutual Recursion
-
-~let REven := λr.λn.(IsZero n) True (r (Pred n))
-~let ROdd  := λr.λn.(IsZero n) False (r (Pred n))
-
-~let Even := Y (λx.REven (ROdd x))
-~let Odd  := Y (λx.ROdd (REven x))

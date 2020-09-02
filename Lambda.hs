@@ -2,8 +2,8 @@ module Lambda
 (
     Term(..),
     freeVars,
-    descend,
-    descendA,
+    freshName,
+    nextName,
     normOrder,
     applOrder,
     normalise,
@@ -101,28 +101,31 @@ substitute fv a t (Abs x y) | a == x           = Abs x y
                             | S.notMember x fv = Abs x  (substitute fv a t y)
                             | otherwise        = Abs fn (substitute fv a t (rename x (Var fn) y))
                             where
-                              fn = nextName (maximumBy compareNames (S.insert x (fv `S.union` allVars y)))
+                              fn = freshName (S.insert x (fv `S.union` allVars y))
 
 rename :: String -> Term -> Term -> Term
 rename a b (Var x)   = if x == a then b   else Var x
 rename a b (Abs x y) = if x == a then Abs x y else Abs x (rename a b y)
 rename a b t         = descend (rename a b) t
 
-nextName :: String -> String
-nextName = reverse . bump . reverse
+freshName :: Set String -> String
+freshName = nextName . maximumBy compareNames . S.insert ""
   where
-    bump ""       = "a"
-    bump ('z':xs) = 'a' : nextName xs
-    bump ( x :xs) = succ x : xs
+    compareNames :: String -> String -> Ordering
+    compareNames = compareLength <> compare
+      where
+        compareLength :: [a] -> [a] -> Ordering
+        compareLength []     []     = EQ
+        compareLength []     (_:_)  = LT
+        compareLength (_:_)  []     = GT
+        compareLength (_:xs) (_:ys) = compareLength xs ys
 
-compareNames :: String -> String -> Ordering
-compareNames = compareLength <> compare
+nextName :: String -> String
+nextName = reverse . go . reverse
   where
-    compareLength :: [a] -> [a] -> Ordering
-    compareLength []     []     = EQ
-    compareLength []     (_:_)  = LT
-    compareLength (_:_)  []     = GT
-    compareLength (_:xs) (_:ys) = compareLength xs ys
+    go ""       = "a"
+    go ('z':xs) = 'a' : nextName xs
+    go ( x :xs) = succ x : xs
 
 {-
     Functions for performing single reduction steps, for the normal order

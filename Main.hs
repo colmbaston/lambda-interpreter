@@ -154,7 +154,7 @@ parseError :: Interpreter ()
 parseError = do ansiColour red
                 outputStrLn "parse error"
 
-runInput :: Input -> Interpreter ()
+runInput :: Input Term -> Interpreter ()
 runInput i = do s <- lift get
                 case i of
                   Term  t  -> interruptible (runTerm  t)

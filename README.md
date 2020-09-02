@@ -6,27 +6,19 @@ An interpreter for the untyped [λ-calculus](https://en.wikipedia.org/wiki/Lambd
 
 Valid λ-terms can be one of the following three things:
 
-* Variables are non-empty strings of lower-case Latin letters: `a`, `b`, `c`, `x`, `y`, `z`, `aa`, `ab`, etc.
+* Variables are non-empty strings of lower-case Latin letters: `a`, `b`, `c`, `x`, `y`, `z`, `aa`, `ab`, `ac`, etc.
 * λ-abstractions begin with either `λ` or `\`, then consist of a valid variable name and a subterm separated by a dot: `λx.x`, `\y.y`.
 * Applications consist of two subterms separated by a mandatory space: `(λx.x x) (λy.y)`.
 
 The standard associativity and precedence rules are observed, that is, applications associate to the left and have a higher precedence than λ-abstractions.
 Parentheses may be used to delimit λ-terms.
 
-Non-empty strings of decimal digits will be parsed as [Church numerals](https://en.wikipedia.org/wiki/Church_encoding#Church_numerals); for example, `3` is syntactic sugar for `λf.λx.f (f (f x))`.
-Additionally, the interpreter maintains an environment of named λ-terms which may be referenced by an identifier:
+For convenience, the interpreter maintains an environment of named λ-terms which may be referred to by an identifier, and also accepts numerals, pairs, and lists, which are desugared according to an appropriate [Church encoding](https://en.wikipedia.org/wiki/Church_encoding).
 
-* Identifiers are non-empty strings of Latin letters and decimal digits which begin with an upper-case letter.
-* The environment of named λ-terms may be extended using a `~let` command: `~let Identity := λx.x`, `~let Y := λf.(λx.f (x x)) (λx.f (x x))`.
-
-As λ-terms may be difficult to read, the interpreter can pretty-print some common structures:
-
-* If the λ-term is a numeral, it will be displayed in decimal notation.
-* If the λ-term is a pair, the components of the pair will be recursively pretty-printed, and the resulting strings formatted between angle brackets `⟨X,Y⟩`.
-* If the λ-term is a list, the elements of the list will be recursively pretty-printed, and the resulting strings formatted between square brackets `[X,Y,Z]`.
-
-For example, the λ-term `λp.p (λf.λx.f (f (f x))) (λf.λx.f a (f b (f c x)))` will be pretty-printed `⟨3,[a,b,c]⟩`.
-Since the empty list and the numeral `0` share the representation `λf.λx.x`, with no type information to distinguish them, they will both be displayed as `0`.
+* Identifiers are non-empty strings of Latin letters which begin with an upper-case letter. They refer to terms which have previously been entered into the environment using a `~let` command.
+* Numerals are non-empty strings of decimal digits.
+* Pairs begin `<`, then contain two subterms separated by a comma, then end `>`.
+* Lists begin `[`, then contain any number of subterms separated by commas, then end `]`.
 
 See the [prelude](lib/prelude) for many example λ-terms.
 

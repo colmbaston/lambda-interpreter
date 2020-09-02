@@ -2,6 +2,7 @@ module Parser where
 
 import           Data.Void
 import           Data.Char
+import qualified Data.Set as S
 import qualified Data.Map as M
 import           Data.Map (Map)
 import           Control.Monad
@@ -19,17 +20,24 @@ import Lambda
 
 type Parser = Parsec Void String
 
-data Input = Term       Term
-           | Let String Term
-           | Reds       Term
-           | Time       Term
-           | Count      Term
-           | Script FilePath
-           | Eval EvalStrat
-           | PPrint
-           | Help
-           | Exit
-           | Comment
+data Input t = Term       t
+             | Let String t
+             | Reds       t
+             | Time       t
+             | Count      t
+             | Script FilePath
+             | Eval EvalStrat
+             | PPrint
+             | Help
+             | Exit
+             | Comment
+
+data PTerm = PVar String
+           | PAbs String PTerm
+           | PApp PTerm PTerm
+           | PNumeral Integer
+           | PPair PTerm PTerm
+           | PList [PTerm]
 
 data EvalStrat = Norm
                | Appl
@@ -40,23 +48,62 @@ instance Show EvalStrat where
   show Appl = "appl"
   show Off  = "off"
 
--- this keeps chaning across different versions, so I define it myself
-nextChar :: Parser Char
-nextChar = satisfy (const True)
+{-
+    λ-Terms are first parsed as PTerms, representing the higher-level concepts of
+    numerals, pairs, and lists, and are then desugared to Terms represented using
+    nothing more than variables, λ-abstractions, and applications.
+-}
 
-parseInput :: Map String Term -> String -> Maybe Input
+parseInput :: Map String Term -> String -> Maybe (Input Term)
 parseInput env str = case parseMaybe inputParser str of
-                       Nothing        -> Nothing
-                       Just (Term  t) -> Term  <$> dereference env t
-                       Just (Reds  t) -> Reds  <$> dereference env t
-                       Just (Time  t) -> Time  <$> dereference env t
-                       Just (Count t) -> Count <$> dereference env t
-                       Just (Let n t) -> Let n <$> mfilter (null . freeVars) (dereference env t)
-                       i              -> i
+                       Nothing          -> Nothing
+                       Just (Term  t)   -> Term  <$> desugar env t
+                       Just (Reds  t)   -> Reds  <$> desugar env t
+                       Just (Time  t)   -> Time  <$> desugar env t
+                       Just (Count t)   -> Count <$> desugar env t
+                       Just (Let n t)   -> Let n <$> mfilter (null . freeVars) (desugar env t)
+                       Just (Script fp) -> Just (Script fp)
+                       Just (Eval e)    -> Just (Eval e)
+                       Just  PPrint     -> Just  PPrint
+                       Just  Help       -> Just  Help
+                       Just  Exit       -> Just  Exit
+                       Just  Comment    -> Just  Comment
+
+desugar :: Map String Term -> PTerm -> Maybe Term
+desugar env (PVar x) | all isLower x = pure (Var x)
+                     | otherwise     = M.lookup x env
+desugar env (PAbs x y)               = Abs x  <$> desugar env y
+desugar env (PApp x y)               = App    <$> desugar env x <*> desugar env y
+desugar env (PNumeral x)             = pure (toNumeral x)
+desugar env (PPair x y)              = toPair <$> desugar env x <*> desugar env y
+desugar env (PList xs)               = toList <$> mapM (desugar env) xs
+
+toNumeral :: Integer -> Term
+toNumeral n = Abs "f" (Abs "x" (go n))
+  where
+    go 0 = Var "x"
+    go n = App (Var "f") (go (n-1))
+
+toPair :: Term -> Term -> Term
+toPair x y = Abs fp (App (App (Var fp) x) y)
+  where
+    fp = freshName (freeVars x `S.union` freeVars y)
+
+toList :: [Term] -> Term
+toList xs = Abs ff (Abs fx (go xs))
+  where
+    go []     = Var fx
+    go (x:xs) = App (App (Var ff) x) (go xs)
+
+    ff = freshName (foldl (\s x -> freeVars x `S.union` s) S.empty xs)
+    fx = nextName ff
 
 {-
     Some useful parser combinators to augment the set of Megaparsec combinators.
 -}
+
+nextChar :: Parser Char
+nextChar = satisfy (const True)
 
 chainl1 :: Parser b -> Parser (b -> b -> b) -> Parser b
 chainl1 p op = p >>= rest
@@ -71,12 +118,6 @@ trim p = do space
             space
             pure x
 
-parens :: Parser a -> Parser a
-parens p = do char '('
-              x <- trim p
-              char ')'
-              pure x
-
 insensitive :: String -> Parser String
 insensitive = try . mapM (\c -> char (toUpper c) <|> char (toLower c) >> pure c)
 
@@ -90,13 +131,15 @@ insensitive = try . mapM (\c -> char (toUpper c) <|> char (toLower c) >> pure c)
                |  ATOM
 
         ATOM  ::= VAR
-               |  NAT
                |  IDENT
+               |  NUMERAL
+               |  PAIR
+               |  LIST
                |  ( ABS )
 
         VAR   ::= [non-empty string of lower-case letters]
+        IDENT ::= [non-empty string of letters, beginning with an upper-case letter]
         NAT   ::= [non-empty string of decimal digits]
-        IDENT ::= [non-empty string of valid characters, not beginning with a lower-case letter or a decimal digit]
 
     This is an unambiguous grammar that correctly handles the precedence and association
     rules for abstractions and applications. The NAT nonterminal allows for Church-numerals
@@ -104,23 +147,35 @@ insensitive = try . mapM (\c -> char (toUpper c) <|> char (toLower c) >> pure c)
     in the interpreter environment to be referred to by their identifier.
 -}
 
-termParser :: Parser Term
+termParser :: Parser PTerm
 termParser = trim absLevel
 
-absLevel :: Parser Term
+absLevel :: Parser PTerm
 absLevel = appLevel <|> do char '\\' <|> char 'λ'
                            x <- trim (some (satisfy isVarChar))
                            char '.'
-                           Abs x <$> termParser
+                           PAbs x <$> termParser
 
-appLevel :: Parser Term
-appLevel = chainl1 atomLevel (App <$ space1)
+appLevel :: Parser PTerm
+appLevel = chainl1 atomLevel (PApp <$ space1)
 
-atomLevel :: Parser Term
-atomLevel = Var <$> some (satisfy isIdentChar) <|> parens absLevel
-
-isIdentChar :: Char -> Bool
-isIdentChar c = isAscii c && isAlphaNum c
+atomLevel :: Parser PTerm
+atomLevel =  PVar <$> some (satisfy isIdentChar)
+         <|> PNumeral . read <$> some (satisfy isDigit)
+         <|> do char '<'
+                x <- termParser
+                char ','
+                y <- termParser
+                char '>'
+                pure (PPair x y)
+         <|> do char '['
+                xs <- termParser `sepBy` char ','
+                char ']'
+                pure (PList xs)
+         <|> do char '('
+                x <- termParser
+                char ')'
+                pure x
 
 isVarChar :: Char -> Bool
 isVarChar c = isAscii c && isLower c
@@ -130,10 +185,10 @@ isVarChar c = isAscii c && isLower c
     contain only spaces or begin with two '~', and anything else is a λ-term.
 -}
 
-inputParser :: Parser Input
+inputParser :: Parser (Input PTerm)
 inputParser = trim (try (char '~' >> commandParser) <|> commentParser <|> Term <$> termParser)
 
-commandParser :: Parser Input
+commandParser :: Parser (Input PTerm)
 commandParser =  Let                    <$> (insensitive "let"        >> space1 >> ident) <*> (space1 >> string ":=" >> termParser)
              <|> Reds                   <$> (insensitive "reductions" >> space1 >> termParser)
              <|> Time                   <$> (insensitive "time"       >> space1 >> termParser)
@@ -148,7 +203,10 @@ commandParser =  Let                    <$> (insensitive "let"        >> space1 
 ident :: Parser String
 ident = (:) <$> satisfy (\c -> isAscii c && isUpper c) <*> many (satisfy isIdentChar)
 
-commentParser :: Parser Input
+isIdentChar :: Char -> Bool
+isIdentChar c = isAscii c && isAlpha c
+
+commentParser :: Parser (Input PTerm)
 commentParser =  Comment <$ (string "~~" >> many nextChar)
              <|> Comment <$  eof
 
@@ -156,20 +214,3 @@ stratParser :: Parser EvalStrat
 stratParser =  Norm <$ insensitive "norm"
            <|> Appl <$ insensitive "appl"
            <|> Off  <$ insensitive "off"
-
-{-
-    The λ-term parser initially parses NATs and IDENTs as variables, so we must deference
-    them with respect to a interpreter environment to obtain the actual λ-terms they represent.
--}
-
-dereference :: Map String Term -> Term -> Maybe Term
-dereference env (Var x) | all isLower x = pure (Var x)
-                        | all isDigit x = pure (toNumeral (read x))
-                        | otherwise     = M.lookup x env
-dereference env t                       = descendA (dereference env) t
-
-toNumeral :: Int -> Term
-toNumeral n = Abs "f" (Abs "x" (go n))
-  where
-    go 0 = Var "x"
-    go n = App (Var "f") (go (n-1))

@@ -98,7 +98,7 @@ substitute fv a t (Abs x y) | a == x           = Abs x y
                             | S.notMember x fv = Abs x  (substitute fv a t y)
                             | otherwise        = Abs fn (substitute fv a t (substitute S.empty x (Var fn) y))
                             where
-                              fn = freshName (S.insert x (fv `S.union` allVars y))
+                              fn = freshName (fv `S.union` allVars y)
 
 freshName :: Set String -> String
 freshName = nextName . maximumBy compareNames . S.insert ""

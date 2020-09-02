@@ -79,10 +79,13 @@ desugar env (PPair x y)              = toPair <$> desugar env x <*> desugar env 
 desugar env (PList xs)               = toList <$> mapM (desugar env) xs
 
 toNumeral :: Integer -> Term
-toNumeral n = Abs "f" (Abs "x" (go n))
+toNumeral n = Abs ff (Abs fx (go n))
   where
-    go 0 = Var "x"
-    go n = App (Var "f") (go (n-1))
+    go 0 = Var fx
+    go n = App (Var ff) (go (n-1))
+
+    ff = freshName S.empty
+    fx = nextName ff
 
 toPair :: Term -> Term -> Term
 toPair x y = Abs fp (App (App (Var fp) x) y)

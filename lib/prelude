@@ -18,15 +18,23 @@
 ~let Or  := λa.λb.a True b
 ~let Xor := λa.λb.a (Not b) b
 
+~~ Pairs
+
+~let Pair   := λa.λb.λp.p a b
+~let First  := λp.p True
+~let Second := λp.p False
+~let Swap   := λp.Pair (Second p) (First p)
+
 ~~ Church Numeral Operations
 
 ~let IsZero := λn.n (λx.False) True
 ~let Succ   := λn.λf.λx.f (n f x)
-~let Pred   := λn.λf.λx.n (λg.λh.h (g f)) (λu.x) (λu.u)
 ~let Add    := λm.λn.λf.λx.m f (n f x)
-~let Sub    := λm.λn.n Pred m
 ~let Mul    := λm.λn.λf.m (n f)
 ~let Exp    := λm.λn.(IsZero n) 1 (n m)
+
+~let Pred   := λn.First (n (λp.<Second p, Succ (Second p)>) <0,0>)
+~let Sub    := λm.λn.n Pred m
 
 ~let LEQ := λm.λn.IsZero (Sub m n)
 ~let GEQ := λm.λn.IsZero (Sub n m)
@@ -37,13 +45,6 @@
 
 ~let Min := λn.λm.LEQ n m n m
 ~let Max := λn.λm.GEQ n m n m
-
-~~ Pairs
-
-~let Pair   := λa.λb.λp.p a b
-~let First  := λp.p True
-~let Second := λp.p False
-~let Swap   := λp.Pair (Second p) (First p)
 
 ~~ Lists
 

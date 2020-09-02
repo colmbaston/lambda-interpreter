@@ -16,7 +16,7 @@ Parentheses may be used to delimit λ-terms.
 For convenience, the interpreter maintains an environment of named λ-terms which may be referred to by an identifier, and also accepts numerals, pairs, and lists, which are desugared to an appropriate [Church encoding](https://en.wikipedia.org/wiki/Church_encoding).
 
 * Identifiers are non-empty strings of Latin letters which begin with an upper-case letter. They refer to terms which have previously been entered into the environment using a `~let` command.
-* Numerals are non-empty strings of decimal digits.
+* Numerals are non-empty strings of decimal digits, and may represent any natural number.
 * Pairs begin `<`, then consist of exactly two subterms separated by a comma, and end `>`.
 * Lists begin `[`, then consist of any number of subterms separated by commas, and end `]`.
 

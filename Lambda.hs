@@ -6,7 +6,6 @@ module Lambda
     nextName,
     normOrder,
     applOrder,
-    normalise,
     reductions,
     normEval,
     applEval,
@@ -24,6 +23,8 @@ import           Data.Foldable
 import Data.Function
 import Control.Monad.State.Strict
 
+import Debug.Trace
+
 {-
     A module implementing the core Term type, and functions for
     reducing, normalising, or otherwise working with λ-terms.
@@ -37,11 +38,6 @@ freeVars :: Term -> Set String
 freeVars (Var v)   = S.singleton v
 freeVars (Abs v t) = S.delete v (freeVars t)
 freeVars (App x y) = freeVars x `S.union` freeVars y
-
-allVars :: Term -> Set String
-allVars (Var v)   = S.singleton v
-allVars (Abs v t) = S.insert v (allVars t)
-allVars (App x y) = allVars x `S.union` allVars y
 
 closed :: Term -> Bool
 closed = S.null . freeVars
@@ -89,16 +85,15 @@ descendA f (App x y) = App <$> f x <*> f y
 -}
 
 beta :: String -> Term -> Term -> Term
-beta x z = substitute (freeVars z) x z
+beta x z = substitute (S.insert x (freeVars z)) x z
 
 substitute :: Set String -> String -> Term -> Term -> Term
 substitute fv a t (Var x)   = if x == a then t else Var x
 substitute fv a t (App x y) = App (substitute fv a t x) (substitute fv a t y)
 substitute fv a t (Abs x y) | a == x           = Abs x y
                             | S.notMember x fv = Abs x  (substitute fv a t y)
-                            | otherwise        = Abs fn (substitute fv a t (substitute S.empty x (Var fn) y))
-                            where
-                              fn = freshName (fv `S.union` allVars y)
+                            | otherwise        = let fn = freshName (fv `S.union` freeVars y)
+                                                 in Abs fn (substitute fv a t (substitute S.empty x (Var fn) y))
 
 freshName :: Set String -> String
 freshName = nextName . maximumBy compareNames . S.insert ""
@@ -143,11 +138,6 @@ applOrder (App (Abs x y) z) | isNF z    = beta x z y
 applOrder (App x y)         | isNF x    = App x (applOrder y)
                             | otherwise = App (applOrder x) y
 applOrder t                 = descend applOrder t
-
-normalise :: (Term -> Term) -> Term -> Term
-normalise f = go
-  where
-    go t = if isNF t then t else go (f t)
 
 reductions :: (Term -> Term) -> Term -> [Term]
 reductions f = go

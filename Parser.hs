@@ -79,10 +79,10 @@ desugar env (PPair x y)              = toPair <$> desugar env x <*> desugar env 
 desugar env (PList xs)               = toList <$> mapM (desugar env) xs
 
 toNumeral :: Integer -> Term
-toNumeral n = Abs "f" (Abs "x" (go n))
+toNumeral n = Abs "a" (Abs "b" (go n))
   where
-    go 0 = Var "x"
-    go n = App (Var "f") (go (n-1))
+    go 0 = Var "b"
+    go n = App (Var "a") (go (n-1))
 
 toPair :: Term -> Term -> Term
 toPair x y = Abs fp (App (App (Var fp) x) y)
@@ -124,27 +124,24 @@ insensitive = try . mapM (\c -> char (toUpper c) <|> char (toLower c) >> pure c)
 {-
     The parser for λ-terms, loosely based on the following context-free grammar:
 
-     -> ABS   ::= λ VAR . ABS
-               |  APP
+     -> ABS     ::= λ VAR . ABS
+                 |  APP
 
-        APP   ::= APP [space] ATOM
-               |  ATOM
+        APP     ::= APP [space] ATOM
+                 |  ATOM
 
-        ATOM  ::= VAR
-               |  IDENT
-               |  NUMERAL
-               |  PAIR
-               |  LIST
-               |  ( ABS )
+        ATOM    ::= VAR
+                 |  IDENT
+                 |  NUMERAL
+                 |  PAIR
+                 |  LIST
+                 |  ( ABS )
 
-        VAR   ::= [non-empty string of lower-case letters]
-        IDENT ::= [non-empty string of letters, beginning with an upper-case letter]
-        NAT   ::= [non-empty string of decimal digits]
-
-    This is an unambiguous grammar that correctly handles the precedence and association
-    rules for abstractions and applications. The NAT nonterminal allows for Church-numerals
-    to be specified by their decimal representation, and the IDENT nonterminal allows λ-terms
-    in the interpreter environment to be referred to by their identifier.
+        VAR     ::= [non-empty string of lower-case letters]
+        IDENT   ::= [non-empty string of letters, beginning with an upper-case letter]
+        NUMERAL ::= [non-empty string of decimal digits]
+        PAIR    ::= < ABS , ABS >
+        LIST    ::= [ ABS , ... ]
 -}
 
 termParser :: Parser PTerm

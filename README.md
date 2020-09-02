@@ -17,8 +17,8 @@ For convenience, the interpreter maintains an environment of named λ-terms whic
 
 * Identifiers are non-empty strings of Latin letters which begin with an upper-case letter. They refer to terms which have previously been entered into the environment using a `~let` command.
 * Numerals are non-empty strings of decimal digits.
-* Pairs begin `<`, then contain two subterms separated by a comma, then end `>`.
-* Lists begin `[`, then contain any number of subterms separated by commas, then end `]`.
+* Pairs begin `<`, then consist of exactly two subterms separated by a comma, and end `>`.
+* Lists begin `[`, then consist of any number of subterms separated by commas, and end `]`.
 
 See the [prelude](lib/prelude) for many example λ-terms.
 
@@ -38,3 +38,20 @@ Otherwise, inputs have the following effect:
 * `~help`: Print a help message.
 * `~exit`: Exit the interpreter.
 * `~~ comment`: Lines beginning with two tildes will be treated as comments and ignored.
+
+## Examples
+
+```
+~> 2 2 2 2
+65536
+```
+
+```
+~> Swap <<1,2>,3>
+<3,<1,2>>
+```
+
+```
+~> Reverse (Take 5 (Filter Odd Primes))
+[13,11,7,5,3]
+```

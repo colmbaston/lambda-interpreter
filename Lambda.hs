@@ -85,10 +85,7 @@ descendA f (Abs x y) = Abs       x <$> f y
 descendA f (App x y) = App <$> f x <*> f y
 
 {-
-    Functions for performing substitution and dealing with name capture. Naive
-    substitution doesn't check for name capture, and is used as a more efficient
-    version of the capture-avoiding substitution function where we know name
-    capture can't occur.
+    Functions for performing substitution and dealing with name capture.
 -}
 
 beta :: String -> Term -> Term -> Term
@@ -99,14 +96,9 @@ substitute fv a t (Var x)   = if x == a then t else Var x
 substitute fv a t (App x y) = App (substitute fv a t x) (substitute fv a t y)
 substitute fv a t (Abs x y) | a == x           = Abs x y
                             | S.notMember x fv = Abs x  (substitute fv a t y)
-                            | otherwise        = Abs fn (substitute fv a t (rename x (Var fn) y))
+                            | otherwise        = Abs fn (substitute fv a t (substitute S.empty x (Var fn) y))
                             where
                               fn = freshName (S.insert x (fv `S.union` allVars y))
-
-rename :: String -> Term -> Term -> Term
-rename a b (Var x)   = if x == a then b   else Var x
-rename a b (Abs x y) = if x == a then Abs x y else Abs x (rename a b y)
-rename a b t         = descend (rename a b) t
 
 freshName :: Set String -> String
 freshName = nextName . maximumBy compareNames . S.insert ""

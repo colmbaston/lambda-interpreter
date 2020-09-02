@@ -2,6 +2,11 @@
 
 An interpreter for the untyped [λ-calculus](https://en.wikipedia.org/wiki/Lambda_calculus), written in Haskell.
 
+```
+~> Reverse (Take 5 (Filter Odd Primes))
+[13,11,7,5,3]
+```
+
 ## λ-Term Syntax
 
 Valid λ-terms can be one of the following three things:
@@ -38,20 +43,3 @@ Otherwise, inputs have the following effect:
 * `~help`: Print a help message.
 * `~exit`: Exit the interpreter.
 * `~~ comment`: Lines beginning with two tildes will be treated as comments and ignored.
-
-## Examples
-
-```
-~> 2 2 2 2
-65536
-```
-
-```
-~> Swap <<1,2>,3>
-<3,<1,2>>
-```
-
-```
-~> Reverse (Take 5 (Filter Odd Primes))
-[13,11,7,5,3]
-```

@@ -13,7 +13,7 @@ Valid λ-terms can be one of the following three things:
 The standard associativity and precedence rules are observed, that is, applications associate to the left and have a higher precedence than λ-abstractions.
 Parentheses may be used to delimit λ-terms.
 
-For convenience, the interpreter maintains an environment of named λ-terms which may be referred to by an identifier, and also accepts numerals, pairs, and lists, which are desugared according to an appropriate [Church encoding](https://en.wikipedia.org/wiki/Church_encoding).
+For convenience, the interpreter maintains an environment of named λ-terms which may be referred to by an identifier, and also accepts numerals, pairs, and lists, which are desugared to an appropriate [Church encoding](https://en.wikipedia.org/wiki/Church_encoding).
 
 * Identifiers are non-empty strings of Latin letters which begin with an upper-case letter. They refer to terms which have previously been entered into the environment using a `~let` command.
 * Numerals are non-empty strings of decimal digits.

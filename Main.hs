@@ -19,9 +19,10 @@ import System.Console.Haskeline.History
 
 import Control.Arrow
 import Control.Monad
-import Control.Monad.Trans
-import Control.Monad.Trans.State.Strict
 import Control.Monad.Catch
+import Control.Monad.IO.Class
+import Control.Monad.Trans.Class
+import Control.Monad.Trans.State.Strict
 
 import Lambda
 import Parser

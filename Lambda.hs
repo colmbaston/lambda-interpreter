@@ -21,7 +21,7 @@ import qualified Data.IntMap as IM
 import           Data.IntMap (IntMap)
 import           Data.Foldable
 import Data.Function
-import Control.Monad.State.Strict
+import Control.Monad.Trans.State.Strict
 
 import Debug.Trace
 

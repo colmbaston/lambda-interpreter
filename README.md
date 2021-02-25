@@ -38,13 +38,11 @@ See the [prelude](lib/prelude) for many example λ-terms.
 Bare inputs, that is those not beginning with a tilde, will be interpreted as a λ-term, evaluated according to the current evaluation strategy, and printed according to the current printing strategy.
 Otherwise, inputs have the following effect:
 
-* `~let I := T`: Add λ-term `T` to the environment where it may then be referenced using identifier `I`.
-* `~reductions T`: Evaluate λ-term `T`, printing intermediate reductions on the way to the normal form.
-* `~time T`: Evaluate λ-term `T`, timing the evaluation.
-* `~count T`: Evaluate λ-term `T`, counting how many reductions normalisation takes.
-* `~script F`: Run a script of interpreter commands read from file path `F`. Commands are executed line-by-line until the end of the file is reached or a parse error occurs.
+* `~let i := t`: Add λ-term `t` to the environment where it may then be referenced using identifier `i`.
+* `~reductions t`: Evaluate λ-term `t`, printing all intermediate reductions.
+* `~script f`: Run a script of interpreter commands read from file path `f`. Commands are executed line-by-line until the end of the file is reached or a parse error occurs.
 * `~prelude`: Short for `~script ./lib/prelude`.
-* `~eval E`: Switch to evaluation strategy `E`. Available evaluation strategies are `norm`: normal-order reduction, `appl`: applicative-order reduction, and `off`: do not perform any reduction, for example, to inspect a λ-term from the environment.
+* `~eval s`: Switch to evaluation strategy `s`. Available evaluation strategies are `norm`: normal-order reduction, `appl`: applicative-order reduction, and `off`: do not perform any reduction, for example, to inspect a λ-term from the environment.
 * `~pprint`: Toggle pretty-printing.
 * `~help`: Print a help message.
 * `~exit`: Exit the interpreter.

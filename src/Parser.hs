@@ -23,8 +23,6 @@ type Parser = Parsec Void String
 data Input t = Term       t
              | Let String t
              | Reds       t
-             | Time       t
-             | Count      t
              | Script FilePath
              | Eval EvalStrat
              | PPrint
@@ -59,8 +57,6 @@ parseInput env str = case parseMaybe inputParser str of
                        Nothing          -> Nothing
                        Just (Term  t)   -> Term  <$> desugar env t
                        Just (Reds  t)   -> Reds  <$> desugar env t
-                       Just (Time  t)   -> Time  <$> desugar env t
-                       Just (Count t)   -> Count <$> desugar env t
                        Just (Let n t)   -> Let n <$> mfilter (null . freeVars) (desugar env t)
                        Just (Script fp) -> Just (Script fp)
                        Just (Eval e)    -> Just (Eval e)
@@ -74,17 +70,21 @@ desugar env (PVar x) | all isLower x = pure (Var x)
                      | otherwise     = M.lookup x env
 desugar env (PAbs x y)               = Abs x  <$> desugar env y
 desugar env (PApp x y)               = App    <$> desugar env x <*> desugar env y
-desugar env (PNumeral x)             = pure (toNumeral x)
+desugar _   (PNumeral x)             = pure (toNumeral x)
 desugar env (PPair x y)              = toPair <$> desugar env x <*> desugar env y
 desugar env (PList xs)               = toList <$> mapM (desugar env) xs
 
 toNumeral :: Integer -> Term
-toNumeral n = Abs ff (Abs fx (go n))
+toNumeral = Abs ff . Abs fx . go
   where
+    go :: Integer -> Term
     go 0 = Var fx
     go n = App (Var ff) (go (n-1))
 
+    ff :: String
     ff = freshName S.empty
+
+    fx :: String
     fx = nextName ff
 
 toPair :: Term -> Term -> Term
@@ -95,10 +95,14 @@ toPair x y = Abs fp (App (App (Var fp) x) y)
 toList :: [Term] -> Term
 toList xs = Abs ff (Abs fx (go xs))
   where
+    go :: [Term] -> Term
     go []     = Var fx
-    go (x:xs) = App (App (Var ff) x) (go xs)
+    go (y:ys) = App (App (Var ff) y) (go ys)
 
+    ff :: String
     ff = freshName (foldl (\s x -> freeVars x `S.union` s) S.empty xs)
+
+    fx :: String
     fx = nextName ff
 
 {-
@@ -151,9 +155,9 @@ termParser :: Parser PTerm
 termParser = trim absLevel
 
 absLevel :: Parser PTerm
-absLevel = appLevel <|> do char '\\' <|> char 'λ'
+absLevel = appLevel <|> do void (char '\\' <|> char 'λ')
                            x <- trim (some (satisfy isVarChar))
-                           char '.'
+                           void (char '.')
                            PAbs x <$> termParser
 
 appLevel :: Parser PTerm
@@ -162,19 +166,19 @@ appLevel = chainl1 atomLevel (PApp <$ space1)
 atomLevel :: Parser PTerm
 atomLevel =  PVar <$> some (satisfy isIdentChar)
          <|> PNumeral . read <$> some (satisfy isDigit)
-         <|> do char '<'
+         <|> do void (char '<')
                 x <- termParser
-                char ','
+                void (char ',')
                 y <- termParser
-                char '>'
+                void (char '>')
                 pure (PPair x y)
-         <|> do char '['
+         <|> do void (char '[')
                 xs <- termParser `sepBy` char ','
-                char ']'
+                void (char ']')
                 pure (PList xs)
-         <|> do char '('
+         <|> do void (char '(')
                 x <- termParser
-                char ')'
+                void (char ')')
                 pure x
 
 isVarChar :: Char -> Bool
@@ -191,8 +195,6 @@ inputParser = trim (try (char '~' >> commandParser) <|> commentParser <|> Term <
 commandParser :: Parser (Input PTerm)
 commandParser =  Let                    <$> (insensitive "let"        >> space1 >> ident) <*> (space1 >> string ":=" >> termParser)
              <|> Reds                   <$> (insensitive "reductions" >> space1 >> termParser)
-             <|> Time                   <$> (insensitive "time"       >> space1 >> termParser)
-             <|> Count                  <$> (insensitive "count"      >> space1 >> termParser)
              <|> Script                 <$> (insensitive "script"     >> space1 >> reverse . dropWhile isSpace . reverse <$> some nextChar)
              <|> Script "./lib/prelude" <$   insensitive "prelude"
              <|> Eval                   <$> (insensitive "eval"       >> space1 >> stratParser)

@@ -1,14 +1,11 @@
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE BangPatterns #-}
 
 module Main where
 
-import           Numeric
 import           Data.Char
 import           Data.List
 import qualified Data.Map as M
 import           Data.Map (Map)
-import           Data.Time.Clock
 
 import System.IO
 import System.IO.Echo
@@ -90,16 +87,14 @@ settings :: Settings (StateT InterpreterState IO)
 settings = Settings (completeWord Nothing " ()\\." completions) (Just ".history") False
   where
     completions :: String -> StateT InterpreterState IO [Completion]
-    completions xs@('~':_) = pure (makeComp (prefixes xs ["~count",
-                                                          "~eval",
+    completions xs@('~':_) = pure (makeComp (prefixes xs ["~eval",
                                                           "~exit",
                                                           "~help",
                                                           "~let",
                                                           "~pprint",
                                                           "~prelude",
                                                           "~reductions",
-                                                          "~script",
-                                                          "~time"]))
+                                                          "~script"]))
     completions xs         = do ks <- prefixes xs . M.keys . env <$> get
                                 let l = length ks
                                 if l >= 50
@@ -160,8 +155,6 @@ runInput i = do s <- lift get
                 case i of
                   Term  t  -> interruptible (runTerm  t)
                   Reds  t  -> interruptible (runReds  t)
-                  Time  t  -> interruptible (runTime  t)
-                  Count t  -> interruptible (runCount t)
                   Let n t  -> lift (put s{ env = M.insert n t (env s) })
                   Script f -> runScript f
                   Eval e   -> lift (put s{ strat = e })
@@ -195,41 +188,12 @@ runTerm t = do (e,p) <- (getEval True . strat &&& getPrint . pprint) <$> lift ge
 
 runReds :: Term -> Interpreter ()
 runReds t = do (e,p) <- (getEval False . strat &&& getPrint . pprint) <$> lift get
-               zipWithM_ (\n t -> do ansiColour green
+               zipWithM_ (\n u -> do ansiColour green
                                      outputStr (show n ++ ": ")
                                      ansiColour reset
-                                     outputStrLn (p t))
+                                     outputStrLn (p u))
                  ([0..] :: [Int])
                  (reductions e t)
-
-runTime :: Term -> Interpreter ()
-runTime t = do (s,p) <- (strat &&& getPrint . pprint) <$> lift get
-               start <- liftIO getCurrentTime
-               outputStrLn (p (getEval True s t))
-               end   <- liftIO getCurrentTime
-               ansiColour green
-               outputStr "normalised in "
-               ansiColour cyan
-               outputStr (showFFloat (Just 3) (realToFrac (diffUTCTime end start)) " seconds")
-               ansiColour green
-               outputStr " with evaluation strategy "
-               ansiColour cyan
-               outputStrLn (show s)
-
-runCount :: Term -> Interpreter ()
-runCount t = do (s,p) <- (strat &&& getPrint . pprint) <$> lift get
-                let (le,la) = foldl (\(!le,_) la -> (le+1, la)) (-1, undefined) (reductions (getEval False s) t)
-                outputStrLn (p la)
-                ansiColour green
-                outputStr "normalised in "
-                ansiColour cyan
-                outputStr (show le)
-                outputStr " β-reduction"
-                when (le /= 1) (outputStr "s")
-                ansiColour green
-                outputStr " with evaluation strategy "
-                ansiColour cyan
-                outputStrLn (show s)
 
 {-
     When the ~script command is entered, first establish whether that file exists. If it does,
@@ -287,33 +251,26 @@ runPPrint = do s <- lift get
 
 runHelp :: Interpreter ()
 runHelp = do ansiColour green
-             mapM_ outputStrLn [""
-                               ,"  Available commands:"
-                               ,"    t             -> evaluate λ-term t, outputting the final result (if any)"
-                               ,"    ~reductions t -> evaluate λ-term t, outputting intermediate reductions"
-                               ,"    ~let n := t   -> place λ-term t into the environment, bound to name n"
-                               ,"    ~script f     -> run a script of interpreter commands"
-                               ,"    ~prelude      -> shorthand for \"~script lib/prelude\""
-                               ,"    ~eval s       -> switch to evaluation strategy s"
-                               ,"    ~pprint       -> toggle pretty-printing between on (the default) and off"
-                               ,"    ~help         -> output this message"
-                               ,"    ~exit         -> exit the interpreter"
-                               ,"    ~~            -> treat this line as a comment, ignoring it"
-                               ,""
-                               ,"  Syntax:"
-                               ,"    A λ-term t may be -> a λ-abstraction \"λv.t\" or \"\\v.t\""
-                               ,"                      -> an application \"t t\""
-                               ,"                      -> a variable \"v\""
-                               ,"                      -> enclosed in parentheses \"(t)\""
-                               ,""
-                               ,"    A variable v may be any non-empty string of lower-case letters. λ-terms"
-                               ,"    placed into the environment by ~let may be referenced by name, and a name n"
-                               ,"    may be any non-empty string of letters starting with an upper-case letter."
-                               ,"    Identifiers containing only numeric characters are treated as natural numbers"
-                               ,"    and desugared into the corresponding Church numeral representation."
-                               ,""
-                               ,"  Evaluation strategies:"
-                               ,"    norm -> normal order evaluation (the default)"
-                               ,"    appl -> applicative order evaluation"
-                               ,"    off  -> no evaluation"
-                               ,""]
+             mapM_ outputStrLn ["",
+                                "  Available commands:",
+                                "    t             -> evaluate λ-term t, outputting the final result (if any)",
+                                "    ~reductions t -> evaluate λ-term t, outputting intermediate reductions",
+                                "    ~let n := t   -> place λ-term t into the environment, bound to name n",
+                                "    ~script f     -> run a script of interpreter commands at filepath f",
+                                "    ~prelude      -> run the prelude script at lib/prelude",
+                                "    ~eval s       -> switch to evaluation strategy s",
+                                "    ~pprint       -> toggle pretty-printing between on (default) and off",
+                                "    ~help         -> output this message",
+                                "    ~exit         -> exit the interpreter",
+                                "    ~~            -> treat this line as a comment, ignoring it",
+                                "",
+                                "  Syntax:",
+                                "    A λ-term t may be -> a λ-abstraction λv.t or \\v.t",
+                                "                      -> an application t t",
+                                "                      -> a variable v",
+                                "",
+                                "  Evaluation strategies:",
+                                "    norm -> normal order evaluation (default)",
+                                "    appl -> applicative order evaluation",
+                                "    off  -> no evaluation",
+                                ""]

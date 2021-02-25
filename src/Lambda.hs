@@ -2,6 +2,9 @@ module Lambda
 (
     Term(..),
     freeVars,
+    closed,
+    descend,
+    descendA,
     freshName,
     nextName,
     normOrder,
@@ -17,13 +20,7 @@ import           Data.Set (Set)
 import qualified Data.Set as S
 import           Data.Map (Map)
 import qualified Data.Map as M
-import qualified Data.IntMap as IM
-import           Data.IntMap (IntMap)
 import           Data.Foldable
-import Data.Function
-import Control.Monad.Trans.State.Strict
-
-import Debug.Trace
 
 {-
     A module implementing the core Term type, and functions for
@@ -88,7 +85,7 @@ beta :: String -> Term -> Term -> Term
 beta x z = substitute (S.insert x (freeVars z)) x z
 
 substitute :: Set String -> String -> Term -> Term -> Term
-substitute fv a t (Var x)   = if x == a then t else Var x
+substitute _  a t (Var x)   = if x == a then t else Var x
 substitute fv a t (App x y) = App (substitute fv a t x) (substitute fv a t y)
 substitute fv a t (Abs x y) | a == x           = Abs x y
                             | S.notMember x fv = Abs x  (substitute fv a t y)

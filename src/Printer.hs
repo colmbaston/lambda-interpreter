@@ -10,7 +10,6 @@ where
 import           Prelude   hiding (showList)
 import           Text.Show hiding (showList)
 import           Data.Maybe
-import qualified Data.Set as S
 import qualified Numeric  as N
 import           Control.Applicative
 
@@ -70,8 +69,9 @@ showPair = fmap (\(x,y) -> showChar '<'
 toList :: Term -> Maybe [Term]
 toList (Abs f (Abs x t)) | f /= x = go t
   where
+    go :: Term -> Maybe [Term]
     go (Var a)                 | x == a                                                     = Just []
-    go (App (App (Var a) t) b) | f == a && f `notElem` freeVars t && x `notElem` freeVars t = (t:) <$> go b
+    go (App (App (Var a) u) b) | f == a && f `notElem` freeVars u && x `notElem` freeVars u = (u:) <$> go b
     go _                                                                                    = Nothing
 toList _ = Nothing
 

@@ -1,5 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
-
 module Main where
 
 import           Data.Char
@@ -77,11 +75,10 @@ prompt = "\ESC[1;36m~>\ESC[m "
 -}
 
 getInput :: (MonadIO m, MonadMask m) => InputT m (Maybe String)
-getInput = getInputLine prompt >>= \case
-                                      Nothing -> pure Nothing
-                                      Just  x -> do unless (all isSpace x)
-                                                      (modifyHistory (addHistoryUnlessConsecutiveDupe x))
-                                                    pure (Just x)
+getInput = getInputLine prompt >>= maybe (pure Nothing)
+                                         (\x -> do unless (all isSpace x)
+                                                     (modifyHistory (addHistoryUnlessConsecutiveDupe x))
+                                                   pure (Just x))
 
 settings :: Settings (StateT InterpreterState IO)
 settings = Settings (completeWord Nothing " ()\\." completions) (Just ".history") False

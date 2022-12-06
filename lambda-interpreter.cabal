@@ -1,6 +1,6 @@
 cabal-version:       2.0
 
-name:                LambdaInterpreter
+name:                lambda-interpreter
 version:             0.1.0.0
 license-file:        LICENCE
 author:              Colm Baston
@@ -14,7 +14,7 @@ executable LambdaInterpreter
   hs-source-dirs:      src
   main-is:             Main.hs
   other-modules:       Lambda, Parser, Printer
-  build-depends:       base         ^>= 4.16,
+  build-depends:       base          >= 4.16,
                        containers   ^>= 0.6,
                        megaparsec   ^>= 9.2,
                        echo         ^>= 0.1,

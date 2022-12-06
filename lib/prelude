@@ -36,15 +36,15 @@
 ~let Pred   := λn.First (n (λp.<Second p, Succ (Second p)>) <0,0>)
 ~let Sub    := λm.λn.n Pred m
 
-~let LEQ := λm.λn.IsZero (Sub m n)
-~let GEQ := λm.λn.IsZero (Sub n m)
-~let LT  := λm.λn.Not (GEQ m n)
-~let GT  := λm.λn.Not (LEQ m n)
-~let EQ  := λm.λn.And (GEQ m n) (LEQ m n)
-~let NEQ := λm.λn.Not (EQ m n)
+~let Leq := λm.λn.IsZero (Sub m n)
+~let Geq := λm.λn.IsZero (Sub n m)
+~let Lt  := λm.λn.Not (Geq m n)
+~let Gt  := λm.λn.Not (Leq m n)
+~let Eq  := λm.λn.And (Geq m n) (Leq m n)
+~let Neq := λm.λn.Not (Eq m n)
 
-~let Min := λn.λm.LEQ n m n m
-~let Max := λn.λm.GEQ n m n m
+~let Min := λn.λm.Leq n m n m
+~let Max := λn.λm.Geq n m n m
 
 ~~ Lists
 
@@ -57,15 +57,16 @@
 ~let Drop  := λn.n Tail
 ~let Index := λl.λn.Head (Drop n l)
 
-~let Foldr   := λf.λx.λl.l f x
-~let Sum     := λl.l Add 0
-~let Length  := λl.l (True Succ) 0
-~let Append  := λl.l Cons
-~let Concat  := λl.l Append Nil
-~let Map     := λf.λl.l (λh.Cons (f h)) Nil
-~let Filter  := λp.λl.l (λh.(p h) (Cons h) I) Nil
-~let Any     := λp.λl.l (λh.Or  (p h)) False
-~let All     := λp.λl.l (λh.And (p h)) True
+~let Foldr     := λf.λx.λl.l f x
+~let Sum       := λl.l Add 0
+~let Length    := λl.l (True Succ) 0
+~let Append    := λl.l Cons
+~let Concat    := λl.l Append Nil
+~let Map       := λf.λl.l (λh.Cons (f h)) Nil
+~let Filter    := λp.λl.l (λh.(p h) (Cons h) I) Nil
+~let Any       := λp.λl.l (λh.Or  (p h)) False
+~let All       := λp.λl.l (λh.And (p h)) True
+~let TakeWhile := λp.λl.l (λh.(p h) (Cons h) (K Nil)) []
 
 ~~ Fixed-point Combinators
 
@@ -73,10 +74,13 @@
 ~let Z     := λf.(λx.f (λy.x x y)) (λx.f (λy.x x y))
 ~let Theta := (λx.λy.y (x x y)) (λx.λy.y (x x y))
 
-~~ Recursion (Warning: These will diverge under applicative order reduction)
+~~ Recursion (Warning: These will diverge under applicative order reduction!)
+
+~let Iterate := Y (λr.λf.λx.Cons x (r f (f x)))
+~let From    := Iterate Succ
 
 ~let Fac    := Y (λr.λn.(IsZero n) 1 (Mul n (r (Pred n))))
-~let DivMod := Y (λr.λq.λm.λn.(LT m n) (Pair q m) (r (Succ q) (Sub m n) n)) 0
+~let DivMod := Y (λr.λq.λm.λn.(Lt m n) (Pair q m) (r (Succ q) (Sub m n) n)) 0
 ~let Div    := λm.λn.First  (DivMod m n)
 ~let Mod    := λm.λn.Second (DivMod m n)
 
@@ -88,9 +92,3 @@
 ~let Take    := Y (λr.λn.λl.(IsZero n) Nil (Cons (Head l) (r (Pred n) (Tail l))))
 ~let Foldl   := λf.Y (λr.λa.λl.(Null l) a (r (f (Head l) a) (Tail l)))
 ~let Reverse := Foldl Cons Nil
-
-~let Iterate := Y (λr.λf.λx.Cons x (r f (f x)))
-~let From    := Iterate Succ
-
-~let FilterPrime := λr.λxs.Cons (Head xs) (r (Filter (λn.Not (IsZero (Mod n (Head xs)))) (Tail xs)))
-~let Primes      := Cons 2 (Y FilterPrime (Iterate (λx.Succ (Succ x)) 3))

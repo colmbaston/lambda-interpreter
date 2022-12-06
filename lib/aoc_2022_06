@@ -1,0 +1,9 @@
+~let Tails   := Y (λr.λl.(Null l) [] (Cons l (r (Tail l))))
+~let Windows := λw.λl.Take (Succ (Sub (Length l) w)) (Map (Take w) (Tails l))
+~let Unique  := Y (λr.λl.(Null l) True (And (All (Neq (Head l)) (Tail l)) (r (Tail l))))
+~let Solve   := λw.B (Add w) (B Length (B (TakeWhile (B Not Unique)) (Windows w)))
+
+~let Input := [25,2,5,25,5,22,25,25,16,5,17,11,9,22,25,11,17,5,13,15,16,3,1,7,19,12,18,2,6,21,9]
+
+~~ part one: Solve  4 Input
+~~ part two: Solve 14 Input

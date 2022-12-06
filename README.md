@@ -1,6 +1,6 @@
 # Fundamentalist Functional Programming
 
-An interpreter for the untyped [λ-calculus](https://en.wikipedia.org/wiki/Lambda_calculus), written in Haskell.
+An interpreter Alonzo Church's untyped [λ-calculus](https://en.wikipedia.org/wiki/Lambda_calculus), written in Haskell.
 
 ```
 ~> Mul 2 (Fac 6)
@@ -31,7 +31,8 @@ For convenience, the interpreter maintains an environment of named λ-terms whic
 * Pairs begin `<`, then consist of exactly two subterms separated by a comma, and end `>`.
 * Lists begin `[`, then consist of any number of subterms separated by commas, and end `]`.
 
-See the [prelude](lib/prelude) for many example λ-terms.
+See the [prelude](lib/prelude) library for many example λ-terms you might recognise.
+Some other example scripts are also provided in [lib](lib), such as a solution to [Advent of Code 2022 puzzle 06](https://adventofcode.com/2022/day/6).
 
 ## Interpreter Commands
 

@@ -1,0 +1,4 @@
+~let FilterPrime := λr.λl.Cons (Head l) (r (Filter (λn.Not (IsZero (Mod n (Head l)))) (Tail l)))
+~let Primes      := Cons 2 (Y FilterPrime (Iterate (B Succ Succ) 3))
+
+~~ Take 5 Primes ~> [2,3,5,7,11]

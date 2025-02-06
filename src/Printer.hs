@@ -14,8 +14,8 @@ import           Control.Applicative
 import Lambda
 
 {-
-    The pretty-printing function detects whether it's printing a Church-numeral, a Church-pair,
-    or a list (represented by nested pairs), and displays them with special syntax.
+    The pretty-printing function detects whether it's printing a Church-numeral,
+    a Church-pair, or a Church-list and displays them with special syntax.
 -}
 
 pShow :: Term -> String
